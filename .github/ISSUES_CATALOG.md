@@ -5,14 +5,13 @@ Este catálogo centraliza todas as issues planejadas e especificadas para o proj
 ---
 
 ## 📌 Lista de Issues
-
 | # | Tipo | Título | Label | Branch Padrão |
 |---|------|--------|-------|---------------|
-| **#01** | `✨ Feature` | Sistema de Autenticação Segura, Validação de E-mail e Multi-tenancy Local | `feature`, `auth`, `security` | `feat/issue-01-auth-email-validation` |
-| **#02** | `🔒 Security` | Criptografia de Credenciais com Salt (Web Crypto API) e Rate Limiting | `security`, `enhancement` | `feat/issue-02-crypto-security-rate-limiting` |
-| **#03** | `✨ Feature` | Fluxo de Verificação de E-mail (Token 6 Dígitos) e Recuperação de Senha | `feature`, `auth`, `ux` | `feat/issue-03-email-verification-password-reset` |
-| **#04** | `🚀 Enhancement` | Isolamento de Dados Multi-tenant por Usuário e Gestão de Perfil | `enhancement`, `storage`, `ui` | `refactor/issue-04-multi-tenant-user-profile` |
-| **#05** | `📚 Documentation` | Atualização das Diretrizes de Governança e Regras para Agentes de IA | `documentation`, `governance` | `docs/issue-05-agents-governance-update` |
+| **#01** | `✨ Funcionalidade` | Sistema de Autenticação Segura, Validação de E-mail e Multi-tenancy Local | `funcionalidade`, `auth`, `seguranca` | `feat/issue-01-auth-email-validation` |
+| **#02** | `🔒 Segurança` | Criptografia de Credenciais com Salt (Web Crypto API) e Rate Limiting | `seguranca`, `melhoria` | `feat/issue-02-crypto-security-rate-limiting` |
+| **#03** | `✨ Funcionalidade` | Fluxo de Verificação de E-mail (Token 6 Dígitos) e Recuperação de Senha | `funcionalidade`, `auth`, `ux` | `feat/issue-03-email-verification-password-reset` |
+| **#04** | `🚀 Melhoria` | Isolamento de Dados Multi-tenant por Usuário e Gestão de Perfil | `melhoria`, `storage`, `ui` | `refactor/issue-04-multi-tenant-user-profile` |
+| **#05** | `📚 Documentação` | Atualização das Diretrizes de Governança e Regras para Agentes de IA | `documentacao`, `governanca` | `docs/issue-05-agents-governance-update` |
 
 ---
 

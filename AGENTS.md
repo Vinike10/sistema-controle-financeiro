@@ -25,15 +25,17 @@ flowchart LR
 ### Passo 1: Vínculo com a Issue
 Antes de gerar ou modificar arquivos:
 1. Verifique se já existe uma issue aberta para o problema ou funcionalidade.
-2. Se não existir, defina a issue no formato adequado:
-   - **Correção de Bug**: `[Bug] Descrição do problema`
-   - **Nova Função**: `[Feature] Nome da nova funcionalidade`
-   - **Melhoria**: `[Enhancement] Descrição da melhoria/otimização`
-   - **Tarefa Técnica**: `[Task] Configuração, documentação ou infraestrutura`
+2. Se não existir, defina a issue no formato adequado (**SEMPRE com título e descrição em Português**):
+   - **Nova Funcionalidade**: `[Funcionalidade] Nome da nova funcionalidade (#X)`
+   - **Correção de Bug**: `[Correção] Descrição do problema corrigido (#X)`
+   - **Melhoria & Otimização**: `[Melhoria] Descrição da melhoria/refatoração (#X)`
+   - **Segurança & Criptografia**: `[Segurança] Descrição da implementação de segurança (#X)`
+   - **Documentação**: `[Documentação] Atualização de documentação (#X)`
+   - **Tarefa Técnica**: `[Tarefa] Configuração, infraestrutura ou testes (#X)`
 
 ### Passo 2: Nomenclatura da Branch
 Toda branch deve ser nomeada seguindo o padrão com o ID da issue:
-- **Nova função**: `feat/issue-<numero>-<slug-da-feature>`
+- **Nova funcionalidade**: `feat/issue-<numero>-<slug-da-feature>`
   - *Exemplo*: `feat/issue-12-grafico-fluxo-caixa`
 - **Correção de bug**: `fix/issue-<numero>-<slug-do-bug>`
   - *Exemplo*: `fix/issue-05-calculo-saldo-cartao`
@@ -52,10 +54,12 @@ Inclua a referência à issue no commit:
 
 ### Passo 4: Estrutura Obrigatória do Pull Request (PR)
 Ao redigir o Pull Request:
-1. **Título do PR**:
-   - `[Feature] <Título claro> (#<numero_issue>)`
-   - `[Fix] <Título claro> (#<numero_issue>)`
-   - `[Enhancement] <Título claro> (#<numero_issue>)`
+1. **Título do PR (Obrigatoriamente em Português)**:
+   - `[Funcionalidade] <Título claro em Português> (#<numero_issue>)`
+   - `[Correção] <Título claro em Português> (#<numero_issue>)`
+   - `[Melhoria] <Título claro em Português> (#<numero_issue>)`
+   - `[Segurança] <Título claro em Português> (#<numero_issue>)`
+   - `[Documentação] <Título claro em Português> (#<numero_issue>)`
 
 2. **Descrição do PR**:
    **Obrigatório**: Deve preencher o template de PR ([`.github/PULL_REQUEST_TEMPLATE.md`](file:///.github/PULL_REQUEST_TEMPLATE.md)) e conter a seção de vínculo:
