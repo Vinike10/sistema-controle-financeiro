@@ -287,14 +287,40 @@ const Auth = {
     };
   },
 
-  // Envio de E-mail Real (FormSubmit API + EmailJS)
+  // Envio de E-mail Real (EmailJS com parâmetros completos)
   async sendRealEmail({ toEmail, toName, code, type = 'verification' }) {
     const isReset = type === 'reset';
     const subject = isReset 
       ? `🔐 Recuperação de Senha - Control DIN: [${code}]`
       : `🔐 Seu Código de Ativação - Control DIN: [${code}]`;
     
-    // 1. Envio Direto via FormSubmit AJAX (Entrega real e gratuita no e-mail informado)
+    // 1. Envio prioritário via EmailJS
+    const emailConfig = (typeof Storage !== 'undefined' && Storage.getEmailSettings) ? Storage.getEmailSettings() : null;
+    if (window.emailjs && emailConfig && emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey) {
+      try {
+        emailjs.init(emailConfig.publicKey);
+        const response = await emailjs.send(emailConfig.serviceId, emailConfig.templateId, {
+          to_email: toEmail,
+          email: toEmail,
+          to_name: toName || 'Usuário',
+          name: toName || 'Usuário',
+          code: code,
+          passcode: code,
+          token: code,
+          subject: subject,
+          message: `Seu código de validação do Control DIN é: ${code}`
+        });
+
+        if (response.status === 200 || response.text === 'OK') {
+          return { success: true, provider: 'EmailJS', message: `E-mail de ativação enviado com sucesso via EmailJS para ${toEmail}!` };
+        }
+      } catch (err) {
+        console.error('Erro ao enviar via EmailJS:', err);
+        return { success: false, error: `Falha no EmailJS: ${err.text || err.message}` };
+      }
+    }
+
+    // 2. Fallback via FormSubmit
     try {
       const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
         method: 'POST',
@@ -305,45 +331,23 @@ const Auth = {
         body: JSON.stringify({
           _subject: subject,
           _template: 'table',
-          'Sistema': 'Control DIN - Controle Financeiro Inteligente',
+          'Sistema': 'Control DIN - Controle Financeiro',
           'Destinatario': toName || 'Usuário',
           'Codigo_de_Seguranca': code,
-          'Validade': '15 minutos',
-          'Instrucoes': 'Insira este código de 6 dígitos no sistema para ativar sua conta e liberar o acesso com segurança.',
-          'Aviso': 'Se você não solicitou esta mensagem, desconsidere-a.'
+          'Validade': '15 minutos'
         })
       });
-
       if (response.ok) {
-        return { success: true, message: `E-mail de ativação disparado com sucesso para ${toEmail}!` };
+        return { success: true, provider: 'FormSubmit', message: `E-mail disparado para ${toEmail}!` };
       }
-    } catch (err) {
-      console.warn('Tentativa de envio direto via FormSubmit:', err);
-    }
-
-    // 2. Envio via EmailJS se configurado
-    if (window.emailjs) {
-      const emailConfig = (typeof Storage !== 'undefined' && Storage.getEmailSettings) ? Storage.getEmailSettings() : null;
-      if (emailConfig && emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey) {
-        try {
-          emailjs.init(emailConfig.publicKey);
-          await emailjs.send(emailConfig.serviceId, emailConfig.templateId, {
-            to_email: toEmail,
-            to_name: toName,
-            code: code,
-            subject: subject
-          });
-          return { success: true, message: `E-mail enviado via EmailJS para ${toEmail}!` };
-        } catch (err) {
-          console.warn('Erro ao enviar via EmailJS:', err);
-        }
-      }
+    } catch (e) {
+      console.warn('FormSubmit:', e);
     }
 
     return { 
-      success: false, 
-      code,
-      message: `Código gerado: ${code}. Você pode visualizá-lo na caixa de entrada simulada ou utilizar este token.` 
+      success: false,
+      isConfigMissing: !emailConfig || !emailConfig.publicKey,
+      message: 'Configure suas chaves do EmailJS em Configurações para disparo direto.'
     };
   },
 
