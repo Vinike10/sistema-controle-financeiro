@@ -378,6 +378,14 @@
 
           <!-- Quick Action Buttons -->
           <div class="quick-buttons">
+            <button class="btn btn-outline hide-mobile" id="btnOpenImportModal" title="Importar Planilha (CSV) ou Backup (JSON)">
+              <i data-lucide="file-up"></i>
+              <span>Importar</span>
+            </button>
+            <button class="btn btn-secondary hide-mobile" id="btnQuickBackupJSON" title="Salvar e baixar backup completo dos dados">
+              <i data-lucide="save"></i>
+              <span>Salvar Backup</span>
+            </button>
             <button class="btn btn-secondary" id="btnOpenTransferModal">
               <i data-lucide="arrow-right-left"></i>
               <span class="hide-mobile">Transferir</span>
@@ -628,6 +636,11 @@
                 <button class="btn btn-outline btn-sm" id="btnResetFilters" title="Limpar filtros">
                   <i data-lucide="rotate-ccw"></i>
                   <span>Limpar</span>
+                </button>
+
+                <button class="btn btn-primary btn-sm" id="btnTxOpenImportModal" title="Importar planilha para este mês">
+                  <i data-lucide="file-up"></i>
+                  <span>Importar Planilha</span>
                 </button>
               </div>
             </div>
@@ -1339,6 +1352,137 @@
             <button type="submit" class="btn btn-primary" id="btnChangePasswordSubmit">Atualizar Senha</button>
           </div>
         </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Importar Planilhas (CSV/Excel) ou JSON -->
+  <div class="modal-overlay" id="modalImportData">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title">📥 Importar Planilhas (CSV) ou Backup (JSON)</h3>
+          <span class="modal-subtitle">Carregue seus extratos bancários, planilhas do Excel ou restaure backups em segundos</span>
+        </div>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalImportData">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Dropzone Area -->
+        <div class="import-dropzone" id="importDropzone">
+          <div class="dropzone-icon">
+            <i data-lucide="file-spreadsheet"></i>
+          </div>
+          <h4 class="dropzone-title">Arraste e solte sua planilha ou arquivo aqui</h4>
+          <p class="dropzone-text">Suporta arquivos <strong>.CSV</strong> (Excel, extratos bancários) e <strong>.JSON</strong> (backup)</p>
+          <div class="dropzone-actions">
+            <button type="button" class="btn btn-primary" id="btnSelectImportFile">
+              <i data-lucide="folder-open"></i>
+              <span>Selecionar Arquivo no Computador</span>
+            </button>
+            <button type="button" class="btn btn-outline" id="btnDownloadModelCSV">
+              <i data-lucide="download"></i>
+              <span>📄 Baixar Planilha Modelo (.CSV)</span>
+            </button>
+          </div>
+          <input type="file" id="inputImportFile" accept=".csv, .txt, .json" style="display: none;">
+        </div>
+
+        <!-- Selected File Status Badge -->
+        <div class="selected-file-banner" id="selectedFileBanner" style="display: none;">
+          <div class="file-info-left">
+            <i data-lucide="file-check" class="text-success"></i>
+            <div>
+              <strong id="importFileName">extrato.csv</strong>
+              <span id="importFileSize" class="text-muted">12.5 KB</span>
+            </div>
+          </div>
+          <button type="button" class="btn-ghost btn-sm" id="btnRemoveSelectedFile">
+            <i data-lucide="trash-2"></i> Remover
+          </button>
+        </div>
+
+        <!-- Import Configuration Options -->
+        <div class="import-config-grid mt-3" id="importConfigGrid" style="display: none;">
+          <div class="form-group">
+            <label for="importTargetAccount" class="form-label">Atribuir Lançamentos à Conta:</label>
+            <select id="importTargetAccount" class="input-control select-control">
+              <!-- Populated dynamically with user accounts -->
+            </select>
+            <span class="input-hint">Caso a planilha não especifique a conta bancária</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Modo de Importação:</label>
+            <div class="import-mode-radios">
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="merge" checked>
+                <span><strong>Mesclar</strong> (Adicionar aos registros existentes sem apagar nada)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="replace">
+                <span><strong>Substituir</strong> (Substituir todas as transações atuais)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Preview Box -->
+        <div class="import-preview-box mt-3" id="importPreviewBox" style="display: none;">
+          <div class="preview-header">
+            <h4>Pré-visualização dos Lançamentos</h4>
+            <span class="badge-status-inline" id="previewTotalBadge">0 transações detectadas</span>
+          </div>
+
+          <!-- Quick KPI Cards of the Imported File -->
+          <div class="preview-kpi-grid">
+            <div class="prev-kpi-card income">
+              <span class="prev-kpi-label">Total Receitas</span>
+              <strong id="prevTotalIncome" class="text-success">R$ 0,00</strong>
+              <span class="prev-kpi-sub" id="prevCountIncome">0 lançamentos</span>
+            </div>
+            <div class="prev-kpi-card expense">
+              <span class="prev-kpi-label">Total Despesas</span>
+              <strong id="prevTotalExpense" class="text-danger">R$ 0,00</strong>
+              <span class="prev-kpi-sub" id="prevCountExpense">0 lançamentos</span>
+            </div>
+            <div class="prev-kpi-card net">
+              <span class="prev-kpi-label">Balanço do Arquivo</span>
+              <strong id="prevNetBalance">R$ 0,00</strong>
+              <span class="prev-kpi-sub">Resultado líquido</span>
+            </div>
+          </div>
+
+          <!-- Preview Table with First Rows -->
+          <div class="table-responsive mt-2">
+            <table class="data-table preview-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Categoria</th>
+                  <th class="text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewTableBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="auth-alert mt-2" id="importAlert" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalImportData">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btnExecuteImport" disabled>
+          <i data-lucide="check-circle-2"></i>
+          <span id="btnExecuteImportText">Importar Dados</span>
+        </button>
       </div>
     </div>
   </div>

@@ -21,6 +21,8 @@ class App {
       accountId: 'all',
       status: 'all'
     };
+
+    this.parsedImportData = null;
   }
 
   async init() {
@@ -1200,6 +1202,224 @@ class App {
         UI.refreshIcons();
       }
     });
+
+    // ==================== BOTÃO DE BACKUP RÁPIDO NO HEADER ====================
+    document.getElementById('btnQuickBackupJSON')?.addEventListener('click', () => {
+      Storage.exportBackupJSON();
+      UI.showToast('💾 Backup completo baixado com sucesso!', 'success');
+    });
+
+    // ==================== MODAL DE IMPORTAÇÃO DE PLANILHAS E JSON ====================
+    const openImportModal = () => {
+      const accounts = Storage.getAccounts();
+      const select = document.getElementById('importTargetAccount');
+      if (select) {
+        select.innerHTML = accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      }
+      this.resetImportModal();
+      this.openModal('modalImportData');
+      UI.refreshIcons();
+    };
+
+    document.getElementById('btnOpenImportModal')?.addEventListener('click', openImportModal);
+    document.getElementById('btnTxOpenImportModal')?.addEventListener('click', openImportModal);
+
+    document.getElementById('btnDownloadModelCSV')?.addEventListener('click', () => {
+      Storage.downloadModelCSV();
+      UI.showToast('📄 Planilha modelo (.CSV) baixada! Abra no Excel para preencher.', 'success');
+    });
+
+    document.getElementById('btnSelectImportFile')?.addEventListener('click', () => {
+      document.getElementById('inputImportFile').click();
+    });
+
+    const dropzone = document.getElementById('importDropzone');
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+        });
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          this.handleImportFile(files[0]);
+        }
+      });
+    }
+
+    document.getElementById('inputImportFile')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.handleImportFile(file);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btnRemoveSelectedFile')?.addEventListener('click', () => {
+      this.resetImportModal();
+    });
+
+    document.getElementById('importTargetAccount')?.addEventListener('change', () => {
+      if (this.currentRawImportText) {
+        const accId = document.getElementById('importTargetAccount').value;
+        const res = Storage.parseCSVTransactions(this.currentRawImportText, accId);
+        if (res.success) {
+          this.parsedImportData = res.transactions;
+          this.renderImportPreview(res);
+        }
+      }
+    });
+
+    document.getElementById('btnExecuteImport')?.addEventListener('click', () => {
+      if (!this.parsedImportData || this.parsedImportData.length === 0) {
+        UI.showToast('Nenhuma transação selecionada para importação.', 'warning');
+        return;
+      }
+
+      const mode = document.querySelector('input[name="importMode"]:checked')?.value || 'merge';
+      const result = Storage.importTransactions(this.parsedImportData, mode);
+
+      if (result.success) {
+        this.closeModal('modalImportData');
+        UI.showToast(result.message, 'success');
+        UI.populateSelects();
+        this.renderCurrentView(true);
+      } else {
+        UI.showToast(result.message, 'error');
+      }
+    });
+  }
+
+  // Reseta estado do modal de importação
+  resetImportModal() {
+    this.parsedImportData = null;
+    this.currentRawImportText = null;
+
+    document.getElementById('selectedFileBanner').style.display = 'none';
+    document.getElementById('importConfigGrid').style.display = 'none';
+    document.getElementById('importPreviewBox').style.display = 'none';
+    document.getElementById('importAlert').style.display = 'none';
+
+    const btnExec = document.getElementById('btnExecuteImport');
+    if (btnExec) {
+      btnExec.disabled = true;
+      document.getElementById('btnExecuteImportText').textContent = 'Importar Dados';
+    }
+  }
+
+  // Processa arquivo selecionado (CSV ou JSON)
+  handleImportFile(file) {
+    if (!file) return;
+
+    const fileName = file.name;
+    const isJSON = fileName.endsWith('.json');
+    const isCSV = fileName.endsWith('.csv') || fileName.endsWith('.txt');
+
+    if (!isJSON && !isCSV) {
+      UI.showToast('Por favor, selecione um arquivo válido (.CSV ou .JSON).', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      this.currentRawImportText = content;
+
+      document.getElementById('importFileName').textContent = fileName;
+      document.getElementById('importFileSize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      document.getElementById('selectedFileBanner').style.display = 'flex';
+      document.getElementById('importConfigGrid').style.display = 'grid';
+
+      if (isJSON) {
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.transactions && Array.isArray(parsed.transactions)) {
+            this.parsedImportData = parsed.transactions;
+            const summary = {
+              totalIncome: parsed.transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+              totalExpense: parsed.transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+              countIncome: parsed.transactions.filter(t => t.type === 'income').length,
+              countExpense: parsed.transactions.filter(t => t.type === 'expense').length
+            };
+            this.renderImportPreview({ transactions: parsed.transactions, totalCount: parsed.transactions.length, summary });
+          } else {
+            UI.showToast('Arquivo JSON de backup lido. Você pode restaurar em Configurações.', 'info');
+          }
+        } catch {
+          UI.showToast('Erro ao ler arquivo JSON.', 'error');
+        }
+      } else {
+        // CSV Parsing
+        const targetAccId = document.getElementById('importTargetAccount')?.value;
+        const result = Storage.parseCSVTransactions(content, targetAccId);
+
+        if (result.success) {
+          this.parsedImportData = result.transactions;
+          this.renderImportPreview(result);
+        } else {
+          document.getElementById('importAlert').style.display = 'block';
+          document.getElementById('importAlert').className = 'auth-alert alert-danger';
+          document.getElementById('importAlert').textContent = result.error || 'Não foi possível ler as transações da planilha.';
+        }
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Renderiza a pré-visualização das transações
+  renderImportPreview(result) {
+    const { transactions, totalCount, summary } = result;
+    const previewBox = document.getElementById('importPreviewBox');
+    const tableBody = document.getElementById('importPreviewTableBody');
+    const badge = document.getElementById('previewTotalBadge');
+
+    if (badge) badge.textContent = `${totalCount} transações detectadas`;
+    if (document.getElementById('prevTotalIncome')) document.getElementById('prevTotalIncome').textContent = UI.formatCurrency(summary.totalIncome);
+    if (document.getElementById('prevCountIncome')) document.getElementById('prevCountIncome').textContent = `${summary.countIncome} receitas`;
+    if (document.getElementById('prevTotalExpense')) document.getElementById('prevTotalExpense').textContent = UI.formatCurrency(summary.totalExpense);
+    if (document.getElementById('prevCountExpense')) document.getElementById('prevCountExpense').textContent = `${summary.countExpense} despesas`;
+    
+    const net = summary.totalIncome - summary.totalExpense;
+    if (document.getElementById('prevNetBalance')) {
+      const el = document.getElementById('prevNetBalance');
+      el.textContent = UI.formatCurrency(net);
+      el.className = net >= 0 ? 'text-success' : 'text-danger';
+    }
+
+    // Renderiza primeiras 5 transações na tabela
+    const categories = Storage.getCategories();
+    const catMap = new Map(categories.map(c => [c.id, c.name]));
+
+    const firstRows = transactions.slice(0, 6);
+    tableBody.innerHTML = firstRows.map(tx => `
+      <tr>
+        <td>${tx.date}</td>
+        <td><strong>${tx.description}</strong></td>
+        <td><span class="badge-status-inline ${tx.type === 'income' ? 'income' : 'expense'}">${tx.type === 'income' ? 'Receita' : 'Despesa'}</span></td>
+        <td>${catMap.get(tx.categoryId) || 'Geral'}</td>
+        <td class="text-right ${tx.type === 'income' ? 'text-success' : 'text-danger'} font-semibold">${tx.type === 'income' ? '+' : '-'} ${UI.formatCurrency(tx.amount)}</td>
+      </tr>
+    `).join('');
+
+    previewBox.style.display = 'block';
+
+    const btnExec = document.getElementById('btnExecuteImport');
+    if (btnExec) {
+      btnExec.disabled = false;
+      document.getElementById('btnExecuteImportText').textContent = `Importar ${totalCount} Transações`;
+    }
+
+    UI.refreshIcons();
   }
 
   // Popula campos de configuração do EmailJS
