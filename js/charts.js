@@ -12,7 +12,7 @@ function easeOutCubic(t) {
   return 1 - Math.pow(1 - t, 3);
 }
 
-export const Charts = {
+const Charts = {
   // Gráfico de Fluxo Financeiro com Animação de Crescimento Suave
   renderCashFlow(canvasId, monthsData) {
     const canvas = document.getElementById(canvasId);
@@ -284,3 +284,5 @@ function formatShortBRL(val) {
   if (val >= 1000) return `R$ ${(val / 1000).toFixed(0)}k`;
   return `R$ ${val.toFixed(0)}`;
 }
+
+window.Charts = Charts;

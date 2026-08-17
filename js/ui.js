@@ -4,16 +4,10 @@
  * contadores numéricos animados e animações escalonadas (staggered).
  */
 
-import { Storage } from './storage.js';
-import { Transactions } from './transactions.js';
-import { Accounts } from './accounts.js';
-import { Budgets, Goals } from './budgets.js';
-import { Charts } from './charts.js';
-
 // Cache para interpolação de contadores
 const numericValuesCache = new Map();
 
-export const UI = {
+const UI = {
   // Inicialização e atualização de ícones Lucide
   refreshIcons() {
     if (window.lucide) {
@@ -939,4 +933,6 @@ export const UI = {
     this.refreshIcons();
   }
 };
+
+window.UI = UI;
 
