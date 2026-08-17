@@ -11,13 +11,20 @@
   <link rel="stylesheet" href="css/styles.css">
   <!-- Lucide Icons via unpkg -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- EmailJS SDK para envio de e-mails reais -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body class="theme-light">
   <!-- Auth Screen Overlay (Login / Cadastro / Validação de E-mail / Recuperação) -->
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-card-container">
       <div class="auth-card" id="authCard">
-        <!-- Auth Header / Brand -->
+        <!-- Auth Header / Brand & Theme Toggle -->
+        <div class="auth-header-top">
+          <button type="button" class="btn-icon btn-auth-theme-toggle" id="btnAuthThemeToggle" title="Alternar tema claro/escuro">
+            <i data-lucide="moon" id="authThemeIcon"></i>
+          </button>
+        </div>
         <div class="auth-header">
           <div class="brand-logo justify-center">
             <div class="brand-icon">
@@ -190,11 +197,16 @@
             <input type="text" maxlength="1" class="code-digit-input" id="digit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <!-- Demo Code Fast-Fill Hint -->
+          <!-- Demo Code Fast-Fill & Email Inbox Viewer -->
           <div class="code-demo-hint" id="codeDemoHint">
-            <span>Código gerado na simulação: <strong id="demoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher Código</button>
+            <span>Código gerado no e-mail: <strong id="demoCodeValue">------</strong></span>
+            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher</button>
           </div>
+
+          <button type="button" class="btn btn-secondary btn-block" id="btnOpenEmailSimulator">
+            <i data-lucide="mail-open"></i>
+            <span>📬 Abrir Caixa de Entrada (Ver E-mail)</span>
+          </button>
 
           <div class="auth-alert" id="verifyAlert" style="display: none;"></div>
 
@@ -1321,9 +1333,14 @@
           </div>
 
           <div class="code-demo-hint" id="stdCodeDemoHint">
-            <span>Código gerado: <strong id="stdDemoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher Código</button>
+            <span>Código gerado no e-mail: <strong id="stdDemoCodeValue">------</strong></span>
+            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher</button>
           </div>
+
+          <button type="button" class="btn btn-secondary btn-block mt-2 mb-2" id="btnStdOpenEmailSimulator">
+            <i data-lucide="mail-open"></i>
+            <span>📬 Abrir Caixa de Entrada (Ver E-mail)</span>
+          </button>
 
           <div class="auth-alert" id="stdVerifyAlert" style="display: none;"></div>
 
@@ -1341,10 +1358,85 @@
     </div>
   </div>
 
+  <!-- Modal: Simulador de Caixa de Entrada de E-mail Recebido -->
+  <div class="modal-overlay" id="modalEmailSimulator">
+    <div class="modal-card modal-email-card">
+      <div class="modal-header">
+        <div class="email-client-header-title">
+          <i data-lucide="inbox"></i>
+          <span>Caixa de Entrada de E-mail (Simulação)</span>
+        </div>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalEmailSimulator">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <!-- Email Meta Information -->
+        <div class="email-message-meta">
+          <div class="email-meta-row">
+            <span class="email-meta-tag">De:</span>
+            <strong>seguranca@controldin.com</strong> &lt;Control DIN Segurança & Autenticação&gt;
+          </div>
+          <div class="email-meta-row">
+            <span class="email-meta-tag">Para:</span>
+            <span id="simEmailRecipient">seu.email@exemplo.com</span>
+          </div>
+          <div class="email-meta-row">
+            <span class="email-meta-tag">Assunto:</span>
+            <span class="font-semibold" id="simEmailSubject">🔐 Seu Token de Ativação do Control DIN</span>
+          </div>
+        </div>
+
+        <!-- Rendered HTML Email Body -->
+        <div class="email-html-wrapper">
+          <div class="email-template-box">
+            <div class="email-template-logo">
+              <div class="brand-icon">
+                <i data-lucide="wallet-cards"></i>
+              </div>
+              <span class="brand-title">Control <span class="brand-badge">DIN</span></span>
+            </div>
+
+            <h3 class="email-greeting" id="simEmailGreeting">Olá! Seja bem-vindo ao Control DIN.</h3>
+            <p class="email-body-text">
+              Para validar seu endereço de e-mail e garantir a segurança das suas finanças com criptografia local, utilize o código de 6 dígitos abaixo:
+            </p>
+
+            <div class="email-code-highlight">
+              <span class="email-code-digits" id="simEmailCodeDisplay">------</span>
+              <span class="email-code-timer">⏱️ Código válido por 15 minutos</span>
+            </div>
+
+            <div class="email-cta-box">
+              <button type="button" class="btn btn-primary btn-lg btn-block" id="btnClickActivateInEmail">
+                <i data-lucide="check-circle"></i>
+                <span>✅ Confirmar Meu E-mail com 1 Clique</span>
+              </button>
+            </div>
+
+            <p class="email-footer-warning">
+              Se você não solicitou este cadastro, ignore esta mensagem. Nenhuma senha ou informação financeira é enviada em texto simples.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalEmailSimulator">Fechar E-mail</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Main JavaScript modules -->
-  <script type="module" src="js/app.js"></script>
+  <!-- Main JavaScript modules (Compatibilidade total com protocolo file:// e http://) -->
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/accounts.js"></script>
+  <script src="js/budgets.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

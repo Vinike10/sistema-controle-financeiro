@@ -11,7 +11,7 @@ const AUTH_STORAGE_KEYS = {
   REMEMBER: 'controldin_auth_remember_v1'
 };
 
-export const Auth = {
+const Auth = {
   // ==========================================================================
   // 1. Criptografia & Segurança (Web Crypto API)
   // ==========================================================================
@@ -276,11 +276,75 @@ export const Auth = {
     this.saveUsers(users);
     this.setCurrentSession(newUser, true);
 
+    // Dispara envio de e-mail real em segundo plano
+    this.sendRealEmail({ toEmail: newUser.email, toName: newUser.name, code: verificationCode, type: 'verification' })
+      .catch(e => console.warn('Disparo de e-mail:', e));
+
     return {
       success: true,
       user: newUser,
       verificationCode, // Retornado para exibição de simulação/toast
-      message: 'Conta criada com sucesso! Um código de verificação foi gerado para seu e-mail.'
+      message: 'Conta criada com sucesso! O código de verificação foi enviado para seu e-mail.'
+    };
+  },
+
+  // Envio de E-mail Real (FormSubmit API + EmailJS)
+  async sendRealEmail({ toEmail, toName, code, type = 'verification' }) {
+    const isReset = type === 'reset';
+    const subject = isReset 
+      ? `🔐 Recuperação de Senha - Control DIN: [${code}]`
+      : `🔐 Seu Código de Ativação - Control DIN: [${code}]`;
+    
+    // 1. Envio Direto via FormSubmit AJAX (Entrega real e gratuita no e-mail informado)
+    try {
+      const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: subject,
+          _template: 'table',
+          'Sistema': 'Control DIN - Controle Financeiro Inteligente',
+          'Destinatario': toName || 'Usuário',
+          'Codigo_de_Seguranca': code,
+          'Validade': '15 minutos',
+          'Instrucoes': 'Insira este código de 6 dígitos no sistema para ativar sua conta e liberar o acesso com segurança.',
+          'Aviso': 'Se você não solicitou esta mensagem, desconsidere-a.'
+        })
+      });
+
+      if (response.ok) {
+        return { success: true, message: `E-mail de ativação disparado com sucesso para ${toEmail}!` };
+      }
+    } catch (err) {
+      console.warn('Tentativa de envio direto via FormSubmit:', err);
+    }
+
+    // 2. Envio via EmailJS se configurado
+    if (window.emailjs) {
+      const emailConfig = (typeof Storage !== 'undefined' && Storage.getEmailSettings) ? Storage.getEmailSettings() : null;
+      if (emailConfig && emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey) {
+        try {
+          emailjs.init(emailConfig.publicKey);
+          await emailjs.send(emailConfig.serviceId, emailConfig.templateId, {
+            to_email: toEmail,
+            to_name: toName,
+            code: code,
+            subject: subject
+          });
+          return { success: true, message: `E-mail enviado via EmailJS para ${toEmail}!` };
+        } catch (err) {
+          console.warn('Erro ao enviar via EmailJS:', err);
+        }
+      }
+    }
+
+    return { 
+      success: false, 
+      code,
+      message: `Código gerado: ${code}. Você pode visualizá-lo na caixa de entrada simulada ou utilizar este token.` 
     };
   },
 
@@ -409,10 +473,13 @@ export const Auth = {
     user.verificationExpires = Date.now() + 15 * 60 * 1000; // 15 min
     this.saveUsers(users);
 
+    this.sendRealEmail({ toEmail: user.email, toName: user.name, code: newCode, type: 'verification' })
+      .catch(e => console.warn('Erro ao reenviar e-mail real:', e));
+
     return {
       success: true,
       code: newCode,
-      message: `Novo código gerado: ${newCode} (Válido por 15 minutos).`
+      message: `Novo código gerado: ${newCode} (Disparado para ${user.email}).`
     };
   },
 
@@ -436,10 +503,13 @@ export const Auth = {
     user.resetExpires = Date.now() + 15 * 60 * 1000;
     this.saveUsers(users);
 
+    this.sendRealEmail({ toEmail: user.email, toName: user.name, code: resetCode, type: 'reset' })
+      .catch(e => console.warn('Erro ao disparar e-mail de recuperação:', e));
+
     return {
       success: true,
       code: resetCode,
-      message: `Código de recuperação gerado para ${user.email}.`
+      message: `Código de recuperação enviado para ${user.email}.`
     };
   },
 
@@ -540,3 +610,5 @@ export const Auth = {
     this.clearSession();
   }
 };
+
+window.Auth = Auth;

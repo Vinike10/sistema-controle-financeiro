@@ -3,10 +3,7 @@
  * Gerencia contas bancárias, cartões de crédito e transferências entre contas.
  */
 
-import { Storage } from './storage.js';
-import { Transactions } from './transactions.js';
-
-export const Accounts = {
+const Accounts = {
   getAll() {
     return Storage.getAccounts();
   },
@@ -140,3 +137,5 @@ export const Accounts = {
     return true;
   }
 };
+
+window.Accounts = Accounts;
