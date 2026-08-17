@@ -302,6 +302,25 @@ const Auth = {
       for (const tId of templatesToTry) {
         try {
           emailjs.init(emailConfig.publicKey);
+          const formattedMessage = 
+`========================================
+🔐 CÓDIGO DE VALIDAÇÃO CONTROL DIN: [ ${code} ]
+========================================
+
+Olá, ${toName || 'Usuário'}!
+
+Para validar o seu endereço de e-mail e liberar seu acesso seguro ao sistema Control DIN, utilize o código de 6 dígitos abaixo:
+
+👉 SEU CÓDIGO: ${code}
+
+⏱️ Validade: 15 minutos.
+🔒 Digite este código no formulário de verificação do sistema para ativar sua conta.
+
+Se você não solicitou esta validação, ignore este e-mail.
+
+--
+Control DIN - Gestão Financeira Inteligente`;
+
           const templateParams = {
             to_email: toEmail,
             email: toEmail,
@@ -312,13 +331,16 @@ const Auth = {
             code: code,
             passcode: code,
             token: code,
+            verification_code: code,
+            codigo: code,
             subject: subject,
-            message: `Olá ${toName || 'Usuário'}! Seu código de segurança do Control DIN é: ${code}. Válido por 15 minutos.`
+            message: formattedMessage,
+            user_message: formattedMessage
           };
 
           const response = await emailjs.send(emailConfig.serviceId, tId, templateParams);
           if (response.status === 200 || response.text === 'OK') {
-            return { success: true, provider: 'EmailJS', message: `E-mail de ativação enviado com sucesso via EmailJS para ${toEmail}!` };
+            return { success: true, provider: 'EmailJS', message: `E-mail com código enviado com sucesso para ${toEmail}!` };
           }
         } catch (err) {
           console.warn(`Tentativa com template ${tId} falhou:`, err);
