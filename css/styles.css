@@ -2726,6 +2726,33 @@ html, body {
 .font-semibold { font-weight: 600; }
 .justify-center { justify-content: center; }
 
+.form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.input-hint {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.email-settings-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.test-email-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 /* ==========================================================================
    Auth Screen Overlay & Forms
    ========================================================================== */

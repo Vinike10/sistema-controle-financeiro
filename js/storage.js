@@ -340,6 +340,25 @@ const Storage = {
   resetAllData() {
     const keys = ['transactions', 'accounts', 'categories', 'budgets', 'goals'];
     keys.forEach(k => localStorage.removeItem(this.getKey(k)));
+  },
+
+  // Obter configurações do EmailJS
+  getEmailSettings() {
+    try {
+      const data = localStorage.getItem('controldin_email_config_v1');
+      return data ? JSON.parse(data) : { serviceId: '', templateId: '', publicKey: '' };
+    } catch {
+      return { serviceId: '', templateId: '', publicKey: '' };
+    }
+  },
+
+  // Salvar configurações do EmailJS
+  saveEmailSettings(config) {
+    localStorage.setItem('controldin_email_config_v1', JSON.stringify({
+      serviceId: config.serviceId?.trim() || '',
+      templateId: config.templateId?.trim() || '',
+      publicKey: config.publicKey?.trim() || ''
+    }));
   }
 };
 
