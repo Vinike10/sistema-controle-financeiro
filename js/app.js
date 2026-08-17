@@ -468,8 +468,8 @@ class App {
         UI.clearAuthAlert('recoverAlert');
         document.getElementById('recoverStep1').style.display = 'none';
         document.getElementById('recoverStep2').style.display = 'block';
-        document.getElementById('recoverCode').value = res.code; // Preenche código na simulação
-        UI.showToast(`Código de recuperação: ${res.code}`, 'info');
+        document.getElementById('recoverCode').value = '';
+        UI.showToast('📨 Código de recuperação enviado para seu e-mail!', 'info');
       } else {
         UI.setAuthAlert('recoverAlert', res.error, 'danger');
       }

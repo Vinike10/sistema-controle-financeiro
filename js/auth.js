@@ -509,8 +509,7 @@ Control DIN - Gestão Financeira Inteligente`;
 
     return {
       success: true,
-      code: newCode,
-      message: `Novo código gerado: ${newCode} (Disparado para ${user.email}).`
+      message: `Novo código de verificação enviado para ${user.email}.`
     };
   },
 
@@ -539,7 +538,6 @@ Control DIN - Gestão Financeira Inteligente`;
 
     return {
       success: true,
-      code: resetCode,
       message: `Código de recuperação enviado para ${user.email}.`
     };
   },
