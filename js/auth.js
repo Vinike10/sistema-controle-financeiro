@@ -296,27 +296,33 @@ const Auth = {
     
     // 1. Envio prioritário via EmailJS
     const emailConfig = (typeof Storage !== 'undefined' && Storage.getEmailSettings) ? Storage.getEmailSettings() : null;
-    if (window.emailjs && emailConfig && emailConfig.serviceId && emailConfig.templateId && emailConfig.publicKey) {
-      try {
-        emailjs.init(emailConfig.publicKey);
-        const response = await emailjs.send(emailConfig.serviceId, emailConfig.templateId, {
-          to_email: toEmail,
-          email: toEmail,
-          to_name: toName || 'Usuário',
-          name: toName || 'Usuário',
-          code: code,
-          passcode: code,
-          token: code,
-          subject: subject,
-          message: `Seu código de validação do Control DIN é: ${code}`
-        });
+    if (window.emailjs && emailConfig && emailConfig.serviceId && emailConfig.publicKey) {
+      const templatesToTry = [emailConfig.templateId || 'template_2apm937', 'template_tzniljv'].filter(Boolean);
+      
+      for (const tId of templatesToTry) {
+        try {
+          emailjs.init(emailConfig.publicKey);
+          const templateParams = {
+            to_email: toEmail,
+            email: toEmail,
+            reply_to: toEmail,
+            to_name: toName || 'Usuário',
+            from_name: 'Control DIN - Segurança',
+            name: toName || 'Usuário',
+            code: code,
+            passcode: code,
+            token: code,
+            subject: subject,
+            message: `Olá ${toName || 'Usuário'}! Seu código de segurança do Control DIN é: ${code}. Válido por 15 minutos.`
+          };
 
-        if (response.status === 200 || response.text === 'OK') {
-          return { success: true, provider: 'EmailJS', message: `E-mail de ativação enviado com sucesso via EmailJS para ${toEmail}!` };
+          const response = await emailjs.send(emailConfig.serviceId, tId, templateParams);
+          if (response.status === 200 || response.text === 'OK') {
+            return { success: true, provider: 'EmailJS', message: `E-mail de ativação enviado com sucesso via EmailJS para ${toEmail}!` };
+          }
+        } catch (err) {
+          console.warn(`Tentativa com template ${tId} falhou:`, err);
         }
-      } catch (err) {
-        console.error('Erro ao enviar via EmailJS:', err);
-        return { success: false, error: `Falha no EmailJS: ${err.text || err.message}` };
       }
     }
 
