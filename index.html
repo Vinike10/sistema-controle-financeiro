@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control DIN - Sistema de Controle Financeiro</title>
+  <meta name="description" content="Sistema completo de controle financeiro pessoal e empresarial leve com dashboard inteligente, orçamentos, metas e relatórios.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <!-- Lucide Icons via unpkg -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="theme-light">
+  <!-- Auth Screen Overlay (Login / Cadastro / Validação de E-mail / Recuperação) -->
+  <div class="auth-overlay" id="authOverlay">
+    <div class="auth-card-container">
+      <div class="auth-card" id="authCard">
+        <!-- Auth Header / Brand -->
+        <div class="auth-header">
+          <div class="brand-logo justify-center">
+            <div class="brand-icon">
+              <i data-lucide="wallet-cards"></i>
+            </div>
+            <div class="brand-text">
+              <span class="brand-title">Control <span class="brand-badge">DIN</span></span>
+            </div>
+          </div>
+          <p class="auth-subtitle" id="authSubtitle">Gestão Financeira Inteligente & Segura</p>
+        </div>
+
+        <!-- Auth Navigation Tabs -->
+        <div class="auth-tabs" id="authTabs">
+          <button type="button" class="auth-tab-btn active" id="tabBtnLogin" data-auth-tab="login">
+            <i data-lucide="log-in"></i> Entrar
+          </button>
+          <button type="button" class="auth-tab-btn" id="tabBtnRegister" data-auth-tab="register">
+            <i data-lucide="user-plus"></i> Criar Conta
+          </button>
+        </div>
+
+        <!-- Auth Form: Entrar (Login) -->
+        <form class="auth-form active" id="formLogin">
+          <div class="form-group">
+            <label for="loginEmail" class="form-label">E-mail Cadastrado</label>
+            <div class="input-icon-wrapper">
+              <i data-lucide="mail" class="input-icon"></i>
+              <input type="email" id="loginEmail" class="input-control with-icon" placeholder="seu.email@exemplo.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="loginPassword" class="form-label">Senha</label>
+              <button type="button" class="btn-link" id="btnGoToRecover">Esqueceu a senha?</button>
+            </div>
+            <div class="input-icon-wrapper">
+              <i data-lucide="lock" class="input-icon"></i>
+              <input type="password" id="loginPassword" class="input-control with-icon with-action" placeholder="Digite sua senha" required autocomplete="current-password">
+              <button type="button" class="btn-input-action" id="btnToggleLoginPassword" aria-label="Mostrar senha">
+                <i data-lucide="eye" id="iconLoginPassword"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group-checkbox">
+            <label class="checkbox-label">
+              <input type="checkbox" id="loginRemember" checked>
+              <span>Lembrar de mim neste dispositivo</span>
+            </label>
+          </div>
+
+          <div class="auth-alert" id="loginAlert" style="display: none;"></div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnLoginSubmit">
+            <i data-lucide="log-in"></i>
+            <span>Entrar no Sistema</span>
+          </button>
+
+          <div class="auth-separator">
+            <span>OU</span>
+          </div>
+
+          <!-- Quick 1-Click Demo Mode Button -->
+          <button type="button" class="btn btn-demo-quick btn-block" id="btnQuickDemoLogin">
+            <i data-lucide="sparkles"></i>
+            <span>Acessar Modo Demonstração (1 Clique)</span>
+          </button>
+
+          <div class="auth-footer-text">
+            <span>Ainda não tem conta?</span>
+            <button type="button" class="btn-link font-semibold" id="btnGoToRegister">Criar Conta Gratuita</button>
+          </div>
+        </form>
+
+        <!-- Auth Form: Criar Conta (Register) -->
+        <form class="auth-form" id="formRegister">
+          <div class="form-group">
+            <label for="regName" class="form-label">Nome Completo *</label>
+            <div class="input-icon-wrapper">
+              <i data-lucide="user" class="input-icon"></i>
+              <input type="text" id="regName" class="input-control with-icon" placeholder="Ex: Maria Silva" required autocomplete="name">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="regEmail" class="form-label">Seu Melhor E-mail *</label>
+            <div class="input-icon-wrapper">
+              <i data-lucide="mail" class="input-icon"></i>
+              <input type="email" id="regEmail" class="input-control with-icon" placeholder="seu.email@exemplo.com" required autocomplete="email">
+            </div>
+            <div class="input-feedback" id="regEmailFeedback"></div>
+          </div>
+
+          <div class="form-group">
+            <label for="regPassword" class="form-label">Senha de Acesso *</label>
+            <div class="input-icon-wrapper">
+              <i data-lucide="lock" class="input-icon"></i>
+              <input type="password" id="regPassword" class="input-control with-icon with-action" placeholder="Mínimo de 6 caracteres" required autocomplete="new-password">
+              <button type="button" class="btn-input-action" id="btnToggleRegPassword" aria-label="Mostrar senha">
+                <i data-lucide="eye" id="iconRegPassword"></i>
+              </button>
+            </div>
+            <!-- Password Strength Meter -->
+            <div class="password-strength-container" id="regPasswordStrength">
+              <div class="strength-bar-track">
+                <div class="strength-bar-fill" id="strengthBarFill"></div>
+              </div>
+              <div class="strength-label-row">
+                <span class="strength-text" id="strengthText">Segurança da senha</span>
+                <span class="strength-badge" id="strengthBadge">Não informada</span>
+              </div>
+              <div class="strength-hints" id="strengthHints"></div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="regPasswordConfirm" class="form-label">Confirmação da Senha *</label>
+            <div class="input-icon-wrapper">
+              <i data-lucide="check-circle" class="input-icon"></i>
+              <input type="password" id="regPasswordConfirm" class="input-control with-icon with-action" placeholder="Repita sua senha" required autocomplete="new-password">
+              <button type="button" class="btn-input-action" id="btnToggleRegPasswordConfirm" aria-label="Mostrar senha">
+                <i data-lucide="eye" id="iconRegPasswordConfirm"></i>
+              </button>
+            </div>
+            <div class="input-feedback" id="regPasswordConfirmFeedback"></div>
+          </div>
+
+          <div class="form-group-checkbox">
+            <label class="checkbox-label">
+              <input type="checkbox" id="regAcceptTerms" required checked>
+              <span>Concordo com as diretrizes e armazenamento local seguro</span>
+            </label>
+          </div>
+
+          <div class="auth-alert" id="regAlert" style="display: none;"></div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnRegisterSubmit">
+            <i data-lucide="user-check"></i>
+            <span>Criar Conta & Validar E-mail</span>
+          </button>
+
+          <div class="auth-footer-text">
+            <span>Já possui uma conta?</span>
+            <button type="button" class="btn-link font-semibold" id="btnGoToLogin">Fazer Login</button>
+          </div>
+        </form>
+
+        <!-- Auth Form: Verificar E-mail com Token de 6 Dígitos -->
+        <form class="auth-form" id="formVerifyEmail">
+          <div class="verify-icon-banner">
+            <div class="verify-icon-circle">
+              <i data-lucide="shield-alert"></i>
+            </div>
+            <h3 class="verify-title">Validação de E-mail</h3>
+            <p class="verify-description">
+              Enviamos um código de segurança de 6 dígitos para o e-mail:
+              <strong id="verifyTargetEmail">seu.email@exemplo.com</strong>
+            </p>
+          </div>
+
+          <!-- 6-digit Code Inputs -->
+          <div class="code-inputs-group">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit1" inputmode="numeric" pattern="[0-9]*" autofocus autocomplete="one-time-code">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit2" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit3" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit4" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit5" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input" id="digit6" inputmode="numeric" pattern="[0-9]*">
+          </div>
+
+          <!-- Demo Code Fast-Fill Hint -->
+          <div class="code-demo-hint" id="codeDemoHint">
+            <span>Código gerado na simulação: <strong id="demoCodeValue">------</strong></span>
+            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher Código</button>
+          </div>
+
+          <div class="auth-alert" id="verifyAlert" style="display: none;"></div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnVerifySubmit">
+            <i data-lucide="check-circle-2"></i>
+            <span>Confirmar E-mail</span>
+          </button>
+
+          <div class="resend-group">
+            <span>Não recebeu o código?</span>
+            <button type="button" class="btn-link font-semibold" id="btnResendCode">
+              Reenviar Código (<span id="resendCountdown">30s</span>)
+            </button>
+          </div>
+
+          <div class="auth-footer-text">
+            <button type="button" class="btn-link text-muted" id="btnSkipVerification">
+              Validar mais tarde e acessar o sistema
+            </button>
+          </div>
+        </form>
+
+        <!-- Auth Form: Recuperar Senha (Forgot Password) -->
+        <form class="auth-form" id="formRecoverPassword">
+          <div class="verify-icon-banner">
+            <div class="verify-icon-circle info-circle">
+              <i data-lucide="key-round"></i>
+            </div>
+            <h3 class="verify-title">Recuperação de Senha</h3>
+            <p class="verify-description">Informe seu e-mail para receber um código de redefinição de segurança.</p>
+          </div>
+
+          <!-- Step 1: Request Code -->
+          <div id="recoverStep1">
+            <div class="form-group">
+              <label for="recoverEmail" class="form-label">E-mail Cadastrado *</label>
+              <div class="input-icon-wrapper">
+                <i data-lucide="mail" class="input-icon"></i>
+                <input type="email" id="recoverEmail" class="input-control with-icon" placeholder="seu.email@exemplo.com" required>
+              </div>
+            </div>
+
+            <div class="auth-alert" id="recoverAlert" style="display: none;"></div>
+
+            <button type="button" class="btn btn-primary btn-block btn-lg" id="btnSendRecoverCode">
+              <i data-lucide="send"></i>
+              <span>Enviar Código de Recuperação</span>
+            </button>
+          </div>
+
+          <!-- Step 2: Enter Code and New Password -->
+          <div id="recoverStep2" style="display: none;">
+            <div class="form-group">
+              <label for="recoverCode" class="form-label">Código de 6 Dígitos *</label>
+              <input type="text" id="recoverCode" class="input-control text-center font-mono" placeholder="Ex: 123456" maxlength="6">
+            </div>
+
+            <div class="form-group">
+              <label for="recoverNewPassword" class="form-label">Nova Senha *</label>
+              <input type="password" id="recoverNewPassword" class="input-control" placeholder="Mínimo 6 caracteres" required>
+            </div>
+
+            <div class="auth-alert" id="recoverStep2Alert" style="display: none;"></div>
+
+            <button type="submit" class="btn btn-primary btn-block btn-lg" id="btnResetPasswordSubmit">
+              <i data-lucide="lock"></i>
+              <span>Redefinir Senha & Entrar</span>
+            </button>
+          </div>
+
+          <div class="auth-footer-text">
+            <button type="button" class="btn-link" id="btnBackToLoginFromRecover">
+              <i data-lucide="arrow-left"></i> Voltar para o Login
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand-logo">
+          <div class="brand-icon">
+            <i data-lucide="wallet-cards"></i>
+          </div>
+          <div class="brand-text">
+            <span class="brand-title">Control <span class="brand-badge">DIN</span></span>
+            <span class="brand-sub">Controle Financeiro</span>
+          </div>
+        </div>
+        <button class="btn-icon btn-close-sidebar" id="btnCloseSidebar" aria-label="Fechar menu">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">PRINCIPAL</div>
+        <button class="nav-item active" data-tab="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Visão Geral</span>
+        </button>
+        <button class="nav-item" data-tab="transactions">
+          <i data-lucide="arrow-left-right"></i>
+          <span>Transações</span>
+          <span class="nav-badge" id="navTransactionsCount">0</span>
+        </button>
+        <button class="nav-item" data-tab="accounts">
+          <i data-lucide="landmark"></i>
+          <span>Contas & Cartões</span>
+        </button>
+        <button class="nav-item" data-tab="budgets">
+          <i data-lucide="pie-chart"></i>
+          <span>Orçamentos & Metas</span>
+        </button>
+        <button class="nav-item" data-tab="reports">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Relatórios</span>
+        </button>
+
+        <div class="nav-section-title">SISTEMA</div>
+        <button class="nav-item" data-tab="settings">
+          <i data-lucide="settings"></i>
+          <span>Configurações & Backup</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-summary-card" id="sidebarUserCard">
+          <div class="user-avatar" id="sidebarUserAvatar" style="background-color: #2563eb;">
+            <span id="sidebarUserInitials">UD</span>
+          </div>
+          <div class="user-summary-info">
+            <span class="user-summary-name" id="sidebarUserName">Usuário Demo</span>
+            <span class="user-summary-status" id="sidebarUserStatus">E-mail Verificado</span>
+          </div>
+          <button class="btn-icon-subtle btn-sidebar-logout" id="btnSidebarLogout" title="Sair da Conta">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-wrapper">
+      <!-- Top Header -->
+      <header class="top-header">
+        <div class="header-left">
+          <button class="btn-icon btn-menu-toggle" id="btnToggleSidebar" aria-label="Abrir menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="header-title-container">
+            <h1 class="header-title" id="pageTitle">Visão Geral</h1>
+            <p class="header-subtitle" id="pageSubtitle">Resumo consolidado das suas finanças</p>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <!-- Month/Year Period Picker -->
+          <div class="period-picker">
+            <button class="btn-icon btn-period-prev" id="btnPeriodPrev" title="Mês anterior">
+              <i data-lucide="chevron-left"></i>
+            </button>
+            <div class="period-display" id="periodDisplay">
+              <i data-lucide="calendar" class="period-icon"></i>
+              <span id="periodLabel">Carregando...</span>
+            </div>
+            <button class="btn-icon btn-period-next" id="btnPeriodNext" title="Próximo mês">
+              <i data-lucide="chevron-right"></i>
+            </button>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="quick-buttons">
+            <button class="btn btn-secondary" id="btnOpenTransferModal">
+              <i data-lucide="arrow-right-left"></i>
+              <span class="hide-mobile">Transferir</span>
+            </button>
+            <button class="btn btn-primary" id="btnOpenTransactionModal">
+              <i data-lucide="plus-circle"></i>
+              <span>Nova Transação</span>
+            </button>
+          </div>
+
+          <!-- Theme Toggle -->
+          <button class="btn-icon btn-theme-toggle" id="btnThemeToggle" title="Alternar tema claro/escuro">
+            <i data-lucide="moon" id="themeIcon"></i>
+          </button>
+
+          <!-- User Profile Trigger & Dropdown -->
+          <div class="user-menu-container">
+            <button class="btn-user-profile" id="btnUserProfile" aria-expanded="false" aria-haspopup="true">
+              <div class="header-avatar" id="headerUserAvatar" style="background-color: #2563eb;">
+                <span id="headerUserInitials">UD</span>
+              </div>
+              <div class="header-user-text hide-mobile">
+                <span class="header-user-name" id="headerUserName">Usuário Demo</span>
+                <span class="header-user-badge verified" id="headerUserBadge">
+                  <i data-lucide="check"></i> Verificado
+                </span>
+              </div>
+              <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+            </button>
+
+            <!-- Dropdown Menu -->
+            <div class="user-dropdown-menu" id="userDropdownMenu">
+              <div class="dropdown-user-info">
+                <strong id="dropdownUserName">Usuário Demonstração</strong>
+                <span id="dropdownUserEmail">demo@controldin.com</span>
+                <span class="badge-status-inline" id="dropdownEmailStatus">E-mail Confirmado</span>
+              </div>
+              <hr class="dropdown-divider">
+              <button class="dropdown-item" id="btnOpenProfileModal">
+                <i data-lucide="user-cog"></i>
+                <span>Meu Perfil & Segurança</span>
+              </button>
+              <button class="dropdown-item" id="btnDropdownVerifyEmail" style="display: none;">
+                <i data-lucide="shield-alert"></i>
+                <span>Validar E-mail</span>
+              </button>
+              <hr class="dropdown-divider">
+              <button class="dropdown-item text-danger" id="btnLogout">
+                <i data-lucide="log-out"></i>
+                <span>Sair da Conta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Unverified Email Alert Banner (Shown if email not verified) -->
+      <div class="email-alert-banner" id="emailVerificationBanner" style="display: none;">
+        <div class="email-alert-content">
+          <div class="email-alert-icon">
+            <i data-lucide="shield-alert"></i>
+          </div>
+          <div class="email-alert-text">
+            <strong>Confirmação de E-mail Pendente:</strong>
+            <span>Valide sua conta para garantir recuperação de acesso e segurança total.</span>
+          </div>
+        </div>
+        <div class="email-alert-actions">
+          <button class="btn btn-sm btn-light" id="btnBannerVerifyEmail">
+            <i data-lucide="check-circle-2"></i> Inserir Código
+          </button>
+          <button class="btn-icon btn-sm btn-banner-dismiss" id="btnDismissVerifyBanner" title="Fechar aviso">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Dynamic Content Views -->
+      <main class="content-area">
+        
+        <!-- Tab: Dashboard -->
+        <section class="tab-view active" id="view-dashboard">
+          <!-- KPI Summary Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card card-balance">
+              <div class="kpi-header">
+                <span class="kpi-title">Saldo Total Consolidado</span>
+                <div class="kpi-icon-wrapper balance-icon">
+                  <i data-lucide="wallet"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpiTotalBalance">R$ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-subtext" id="kpiAccountsSummary">Calculado em todas as contas</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-income">
+              <div class="kpi-header">
+                <span class="kpi-title">Receitas do Mês</span>
+                <div class="kpi-icon-wrapper income-icon">
+                  <i data-lucide="trending-up"></i>
+                </div>
+              </div>
+              <div class="kpi-value positive" id="kpiMonthlyIncome">R$ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-pill income-pill" id="kpiIncomePill">Recebidas: R$ 0,00</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-expense">
+              <div class="kpi-header">
+                <span class="kpi-title">Despesas do Mês</span>
+                <div class="kpi-icon-wrapper expense-icon">
+                  <i data-lucide="trending-down"></i>
+                </div>
+              </div>
+              <div class="kpi-value negative" id="kpiMonthlyExpense">R$ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-pill expense-pill" id="kpiExpensePill">Pagas: R$ 0,00</span>
+              </div>
+            </div>
+
+            <div class="kpi-card card-net">
+              <div class="kpi-header">
+                <span class="kpi-title">Balanço do Mês</span>
+                <div class="kpi-icon-wrapper net-icon">
+                  <i data-lucide="piggy-bank"></i>
+                </div>
+              </div>
+              <div class="kpi-value" id="kpiMonthlyNet">R$ 0,00</div>
+              <div class="kpi-footer">
+                <span class="kpi-subtext" id="kpiSavingsRate">Taxa de economia: 0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="dashboard-charts-grid">
+            <div class="card chart-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Fluxo Financeiro Mensal</h2>
+                  <span class="card-subtitle">Evolução de receitas e despesas nos últimos meses</span>
+                </div>
+              </div>
+              <div class="card-body chart-container">
+                <canvas id="cashFlowChartCanvas" height="260"></canvas>
+              </div>
+            </div>
+
+            <div class="card chart-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Despesas por Categoria</h2>
+                  <span class="card-subtitle" id="categoryChartSubtitle">Distribuição do mês atual</span>
+                </div>
+              </div>
+              <div class="card-body chart-container donut-wrapper">
+                <canvas id="categoryDonutCanvas" height="220" width="220"></canvas>
+                <div class="donut-legend" id="categoryDonutLegend"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Lower Dashboard Grid (Recent Transactions & Budget Alerts) -->
+          <div class="dashboard-lower-grid">
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Transações Recentes</h2>
+                  <span class="card-subtitle">Últimas movimentações registradas</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btnGoToTransactions">
+                  Ver Todas <i data-lucide="arrow-right"></i>
+                </button>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Conta</th>
+                        <th>Data</th>
+                        <th>Status</th>
+                        <th class="text-right">Valor</th>
+                      </tr>
+                    </thead>
+                    <tbody id="dashboardRecentTransactionsBody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Alertas de Orçamento & Metas</h2>
+                  <span class="card-subtitle">Acompanhamento de gastos e economia</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" id="btnGoToBudgets">
+                  Gerenciar <i data-lucide="arrow-right"></i>
+                </button>
+              </div>
+              <div class="card-body" id="dashboardBudgetAlertsContainer">
+                <!-- Rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab: Transactions -->
+        <section class="tab-view" id="view-transactions">
+          <div class="card">
+            <!-- Filter & Search Toolbar -->
+            <div class="toolbar-container">
+              <div class="search-box">
+                <i data-lucide="search" class="search-icon"></i>
+                <input type="text" id="txSearchInput" class="input-control" placeholder="Buscar por descrição, tag ou valor...">
+              </div>
+
+              <div class="filters-group">
+                <select id="txFilterType" class="input-control select-control">
+                  <option value="all">Todos os Tipos</option>
+                  <option value="expense">Apenas Despesas</option>
+                  <option value="income">Apenas Receitas</option>
+                  <option value="transfer">Apenas Transferências</option>
+                </select>
+
+                <select id="txFilterCategory" class="input-control select-control">
+                  <option value="all">Todas as Categorias</option>
+                </select>
+
+                <select id="txFilterAccount" class="input-control select-control">
+                  <option value="all">Todas as Contas</option>
+                </select>
+
+                <select id="txFilterStatus" class="input-control select-control">
+                  <option value="all">Todos os Status</option>
+                  <option value="paid">Pago / Recebido</option>
+                  <option value="pending">Pendente</option>
+                </select>
+
+                <button class="btn btn-outline btn-sm" id="btnResetFilters" title="Limpar filtros">
+                  <i data-lucide="rotate-ccw"></i>
+                  <span>Limpar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Transactions Table -->
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="data-table" id="transactionsTable">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Descrição</th>
+                      <th>Categoria</th>
+                      <th>Conta / Cartão</th>
+                      <th>Data</th>
+                      <th class="text-right">Valor</th>
+                      <th class="text-center">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionsTableBody">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="table-footer" id="transactionsTableFooter">
+                <span class="table-counter" id="txTableCounter">Exibindo 0 transações</span>
+                <div class="table-totals" id="txTableTotals">
+                  <!-- Totals summary pill -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab: Accounts & Cards -->
+        <section class="tab-view" id="view-accounts">
+          <div class="view-header-row">
+            <div>
+              <h2 class="section-title">Contas Bancárias & Cartões</h2>
+              <p class="section-subtitle">Gerencie seus bancos, carteiras físicas e limites de cartões de crédito</p>
+            </div>
+            <button class="btn btn-primary" id="btnOpenAccountModal">
+              <i data-lucide="plus"></i>
+              <span>Nova Conta / Cartão</span>
+            </button>
+          </div>
+
+          <div class="accounts-grid" id="accountsGrid">
+            <!-- Account cards rendered dynamically -->
+          </div>
+        </section>
+
+        <!-- Tab: Budgets & Goals -->
+        <section class="tab-view" id="view-budgets">
+          <div class="budgets-goals-container">
+            <!-- Category Budgets Section -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Orçamentos Mensais por Categoria</h2>
+                  <span class="card-subtitle">Defina tetos de gastos para manter seu planejamento financeiro no azul</span>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="btnOpenBudgetModal">
+                  <i data-lucide="plus"></i>
+                  <span>Novo Teto de Categoria</span>
+                </button>
+              </div>
+              <div class="card-body" id="budgetsListContainer">
+                <!-- Budgets rendered dynamically -->
+              </div>
+            </div>
+
+            <!-- Savings Goals Section -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Metas de Economia & Sonhos</h2>
+                  <span class="card-subtitle">Acompanhe a evolução das suas reservas e objetivos futuros</span>
+                </div>
+                <button class="btn btn-primary btn-sm" id="btnOpenGoalModal">
+                  <i data-lucide="target"></i>
+                  <span>Nova Meta</span>
+                </button>
+              </div>
+              <div class="card-body" id="goalsListContainer">
+                <!-- Goals rendered dynamically -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab: Reports -->
+        <section class="tab-view" id="view-reports">
+          <div class="reports-container">
+            <div class="kpi-grid">
+              <div class="kpi-card">
+                <span class="kpi-title">Média Mensal de Receitas</span>
+                <div class="kpi-value positive" id="reportAvgIncome">R$ 0,00</div>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Média Mensal de Despesas</span>
+                <div class="kpi-value negative" id="reportAvgExpense">R$ 0,00</div>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Maior Despesa do Período</span>
+                <div class="kpi-value" id="reportMaxExpense">R$ 0,00</div>
+              </div>
+              <div class="kpi-card">
+                <span class="kpi-title">Total Economizado no Ano</span>
+                <div class="kpi-value" id="reportYearSavings">R$ 0,00</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Ranking de Gastos por Categoria no Período</h2>
+                  <span class="card-subtitle">Detalhamento dos maiores centros de custo</span>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Categoria</th>
+                        <th>Qtd. Transações</th>
+                        <th>% do Total</th>
+                        <th class="text-right">Total Gasto</th>
+                      </tr>
+                    </thead>
+                    <tbody id="reportCategoryRankingBody">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab: Settings & Backup -->
+        <section class="tab-view" id="view-settings">
+          <div class="settings-grid">
+            <!-- Data Backup and Restore Card -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Backup e Restauração de Dados</h2>
+                  <span class="card-subtitle">Exporte ou restaure todos os seus lançamentos, contas e orçamentos</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="settings-action-block">
+                  <div class="action-info">
+                    <h4>Exportar Backup Completo (JSON)</h4>
+                    <p>Gera um arquivo com todos os dados do sistema para guardar com segurança ou transferir para outro dispositivo.</p>
+                  </div>
+                  <button class="btn btn-primary" id="btnExportJSON">
+                    <i data-lucide="download"></i>
+                    <span>Exportar JSON</span>
+                  </button>
+                </div>
+
+                <hr class="divider">
+
+                <div class="settings-action-block">
+                  <div class="action-info">
+                    <h4>Exportar Extrato de Transações (CSV)</h4>
+                    <p>Baixe uma planilha compatível com Excel, Google Sheets e LibreOffice.</p>
+                  </div>
+                  <button class="btn btn-secondary" id="btnExportCSV">
+                    <i data-lucide="file-spreadsheet"></i>
+                    <span>Exportar CSV</span>
+                  </button>
+                </div>
+
+                <hr class="divider">
+
+                <div class="settings-action-block">
+                  <div class="action-info">
+                    <h4>Restaurar Backup (JSON)</h4>
+                    <p>Selecione um arquivo de backup previamente exportado para recuperar suas informações.</p>
+                  </div>
+                  <div>
+                    <input type="file" id="inputImportJSON" accept=".json" style="display: none;">
+                    <button class="btn btn-outline" id="btnTriggerImportJSON">
+                      <i data-lucide="upload"></i>
+                      <span>Importar JSON</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Demo Data and System Reset Card -->
+            <div class="card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Gerenciamento da Base Local</h2>
+                  <span class="card-subtitle">Carregue dados de exemplo para testes ou limpe sua base</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="settings-action-block">
+                  <div class="action-info">
+                    <h4>Carregar Dados de Demonstração</h4>
+                    <p>Preenche o sistema com contas bancárias, receitas, despesas, orçamentos e metas pré-configurados para você explorar todas as telas.</p>
+                  </div>
+                  <button class="btn btn-secondary" id="btnLoadDemoData">
+                    <i data-lucide="sparkles"></i>
+                    <span>Carregar Dados Demo</span>
+                  </button>
+                </div>
+
+                <hr class="divider">
+
+                <div class="settings-action-block">
+                  <div class="action-info">
+                    <h4 class="text-danger">Zerar Todos os Dados</h4>
+                    <p>Apaga permanentemente todas as transações, contas e metas salvas no armazenamento deste navegador.</p>
+                  </div>
+                  <button class="btn btn-danger" id="btnResetAllData">
+                    <i data-lucide="trash-2"></i>
+                    <span>Zerar Base</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- GitHub Governance Rules Card -->
+            <div class="card full-width">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">Regras de Governança do Projeto (GitHub & Agentes)</h2>
+                  <span class="card-subtitle">Padrões obrigatórios seguidos neste repositório</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="governance-summary">
+                  <div class="gov-item">
+                    <div class="gov-icon"><i data-lucide="git-pull-request"></i></div>
+                    <div class="gov-text">
+                      <strong>Vínculo Obrigatório no PR</strong>
+                      <p>Todo PR deve conter <code>Closes #X</code> ou <code>Fixes #X</code> na descrição apontando para sua Issue aberta.</p>
+                    </div>
+                  </div>
+                  <div class="gov-item">
+                    <div class="gov-icon"><i data-lucide="git-branch"></i></div>
+                    <div class="gov-text">
+                      <strong>Padrão de Branches</strong>
+                      <p><code>feat/issue-X-...</code>, <code>fix/issue-X-...</code>, <code>refactor/issue-X-...</code></p>
+                    </div>
+                  </div>
+                  <div class="gov-item">
+                    <div class="gov-icon"><i data-lucide="bot"></i></div>
+                    <div class="gov-text">
+                      <strong>Diretrizes de Agentes (AGENTS.md)</strong>
+                      <p>Qualquer modelo de IA que atue neste projeto deve consultar e respeitar o arquivo <code>AGENTS.md</code>.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal: Nova / Editar Transação -->
+  <div class="modal-overlay" id="modalTransaction">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTxTitle">Nova Transação</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalTransaction">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formTransaction">
+        <input type="hidden" id="txId">
+        <div class="modal-body">
+          <!-- Type selector tabs -->
+          <div class="type-selector-tabs">
+            <button type="button" class="type-tab-btn active expense-tab" data-tx-type="expense">
+              <i data-lucide="arrow-down-circle"></i> Despesa
+            </button>
+            <button type="button" class="type-tab-btn income-tab" data-tx-type="income">
+              <i data-lucide="arrow-up-circle"></i> Receita
+            </button>
+          </div>
+          <input type="hidden" id="txType" value="expense">
+
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="txDescription" class="form-label">Descrição *</label>
+              <input type="text" id="txDescription" class="input-control" placeholder="Ex: Supermercado, Salário, Internet" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="txAmount" class="form-label">Valor (R$) *</label>
+              <input type="number" step="0.01" min="0.01" id="txAmount" class="input-control text-right" placeholder="0,00" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txCategory" class="form-label">Categoria *</label>
+              <select id="txCategory" class="input-control select-control" required></select>
+            </div>
+            <div class="form-group">
+              <label for="txAccount" class="form-label">Conta / Cartão *</label>
+              <select id="txAccount" class="input-control select-control" required></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="txDate" class="form-label">Data de Competência *</label>
+              <input type="date" id="txDate" class="input-control" required>
+            </div>
+            <div class="form-group">
+              <label for="txStatus" class="form-label">Situação</label>
+              <select id="txStatus" class="input-control select-control">
+                <option value="paid">Efetivado (Pago/Recebido)</option>
+                <option value="pending">Pendente (A Pagar/Receber)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Installment Options (Only on creation of expense) -->
+          <div class="form-row" id="installmentRow">
+            <div class="form-group">
+              <label for="txInstallments" class="form-label">Parcelamento</label>
+              <select id="txInstallments" class="input-control select-control">
+                <option value="1">À vista (1x)</option>
+                <option value="2">2x parcelas mensais</option>
+                <option value="3">3x parcelas mensais</option>
+                <option value="4">4x parcelas mensais</option>
+                <option value="5">5x parcelas mensais</option>
+                <option value="6">6x parcelas mensais</option>
+                <option value="10">10x parcelas mensais</option>
+                <option value="12">12x parcelas mensais</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="txNotes" class="form-label">Observações / Tags (Opcional)</label>
+              <input type="text" id="txNotes" class="input-control" placeholder="Ex: #trabalho, almoço de equipe">
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalTransaction">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveTransaction">Salvar Transação</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Transferência Entre Contas -->
+  <div class="modal-overlay" id="modalTransfer">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Transferência Entre Contas</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalTransfer">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formTransfer">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="transferFrom" class="form-label">Conta Origem (Saída) *</label>
+              <select id="transferFrom" class="input-control select-control" required></select>
+            </div>
+            <div class="form-group">
+              <label for="transferTo" class="form-label">Conta Destino (Entrada) *</label>
+              <select id="transferTo" class="input-control select-control" required></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="transferAmount" class="form-label">Valor (R$) *</label>
+              <input type="number" step="0.01" min="0.01" id="transferAmount" class="input-control text-right" placeholder="0,00" required>
+            </div>
+            <div class="form-group">
+              <label for="transferDate" class="form-label">Data da Transferência *</label>
+              <input type="date" id="transferDate" class="input-control" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="transferDescription" class="form-label">Descrição (Opcional)</label>
+            <input type="text" id="transferDescription" class="input-control" placeholder="Ex: Transferência para Poupança">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalTransfer">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Efetivar Transferência</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Nova / Editar Conta Bancária ou Cartão -->
+  <div class="modal-overlay" id="modalAccount">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalAccountTitle">Nova Conta / Cartão</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalAccount">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formAccount">
+        <input type="hidden" id="accId">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label for="accName" class="form-label">Nome da Conta / Banco *</label>
+              <input type="text" id="accName" class="input-control" placeholder="Ex: Nubank, Itaú, Carteira Física" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="accType" class="form-label">Tipo *</label>
+              <select id="accType" class="input-control select-control" required>
+                <option value="checking">Conta Corrente</option>
+                <option value="savings">Poupança / Reserva</option>
+                <option value="credit">Cartão de Crédito</option>
+                <option value="cash">Dinheiro / Carteira</option>
+                <option value="investment">Investimento</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="accInitialBalance" class="form-label" id="accBalanceLabel">Saldo Inicial (R$)</label>
+              <input type="number" step="0.01" id="accInitialBalance" class="input-control text-right" placeholder="0,00" value="0">
+            </div>
+            <div class="form-group">
+              <label for="accColor" class="form-label">Cor de Identificação</label>
+              <input type="color" id="accColor" class="input-control color-picker" value="#3b82f6">
+            </div>
+          </div>
+
+          <div class="form-row" id="cardDetailsRow" style="display: none;">
+            <div class="form-group">
+              <label for="accClosingDay" class="form-label">Dia do Fechamento</label>
+              <input type="number" min="1" max="31" id="accClosingDay" class="input-control" placeholder="Ex: 25">
+            </div>
+            <div class="form-group">
+              <label for="accDueDay" class="form-label">Dia do Vencimento</label>
+              <input type="number" min="1" max="31" id="accDueDay" class="input-control" placeholder="Ex: 5">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalAccount">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="btnSaveAccount">Salvar Conta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Novo / Editar Orçamento de Categoria -->
+  <div class="modal-overlay" id="modalBudget">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalBudgetTitle">Novo Orçamento de Categoria</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalBudget">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formBudget">
+        <input type="hidden" id="budgetId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="budgetCategory" class="form-label">Categoria *</label>
+            <select id="budgetCategory" class="input-control select-control" required></select>
+          </div>
+          <div class="form-group">
+            <label for="budgetLimit" class="form-label">Limite Mensal de Gastos (R$) *</label>
+            <input type="number" step="0.01" min="1" id="budgetLimit" class="input-control text-right" placeholder="0,00" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalBudget">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Orçamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Nova / Editar Meta de Economia -->
+  <div class="modal-overlay" id="modalGoal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalGoalTitle">Nova Meta de Economia</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalGoal">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formGoal">
+        <input type="hidden" id="goalId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="goalTitle" class="form-label">Nome do Objetivo *</label>
+            <input type="text" id="goalTitle" class="input-control" placeholder="Ex: Reserva de Emergência, Viagem Disney, Comprar Carro" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="goalTargetAmount" class="form-label">Valor Alvo (R$) *</label>
+              <input type="number" step="0.01" min="1" id="goalTargetAmount" class="input-control text-right" placeholder="0,00" required>
+            </div>
+            <div class="form-group">
+              <label for="goalCurrentAmount" class="form-label">Valor Inicial Já Poupado (R$)</label>
+              <input type="number" step="0.01" min="0" id="goalCurrentAmount" class="input-control text-right" placeholder="0,00" value="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="goalDeadline" class="form-label">Data Alvo / Prazo (Opcional)</label>
+              <input type="date" id="goalDeadline" class="input-control">
+            </div>
+            <div class="form-group">
+              <label for="goalColor" class="form-label">Cor do Card</label>
+              <input type="color" id="goalColor" class="input-control color-picker" value="#10b981">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalGoal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Meta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Realizar Aporte em Meta -->
+  <div class="modal-overlay" id="modalGoalDeposit">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Realizar Aporte na Meta</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalGoalDeposit">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formGoalDeposit">
+        <input type="hidden" id="depositGoalId">
+        <div class="modal-body">
+          <div class="deposit-meta-info" id="depositGoalInfo">
+            <!-- Meta info rendered -->
+          </div>
+          <div class="form-group">
+            <label for="depositAmount" class="form-label">Valor do Aporte (R$) *</label>
+            <input type="number" step="0.01" min="0.01" id="depositAmount" class="input-control text-right" placeholder="0,00" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalGoalDeposit">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar Aporte</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Perfil & Segurança do Usuário -->
+  <div class="modal-overlay" id="modalProfile">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Meu Perfil & Segurança</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalProfile">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      
+      <!-- Profile Tabs -->
+      <div class="profile-modal-tabs">
+        <button type="button" class="profile-tab-btn active" data-profile-tab="info">
+          <i data-lucide="user"></i> Dados Pessoais
+        </button>
+        <button type="button" class="profile-tab-btn" data-profile-tab="security">
+          <i data-lucide="shield-check"></i> Alterar Senha
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab Pane 1: Profile Info -->
+        <form id="formProfileInfo" class="profile-tab-pane active">
+          <div class="profile-avatar-row">
+            <div class="profile-avatar-large" id="modalProfileAvatar" style="background-color: #2563eb;">
+              <span id="modalProfileInitials">UD</span>
+            </div>
+            <div class="profile-avatar-controls">
+              <label for="profileColor" class="form-label">Cor de Destaque</label>
+              <div class="color-presets-row">
+                <button type="button" class="color-preset-btn" data-color="#2563eb" style="background-color: #2563eb;"></button>
+                <button type="button" class="color-preset-btn" data-color="#10b981" style="background-color: #10b981;"></button>
+                <button type="button" class="color-preset-btn" data-color="#8b5cf6" style="background-color: #8b5cf6;"></button>
+                <button type="button" class="color-preset-btn" data-color="#f97316" style="background-color: #f97316;"></button>
+                <button type="button" class="color-preset-btn" data-color="#ec4899" style="background-color: #ec4899;"></button>
+                <input type="color" id="profileColor" class="input-control color-picker mini" value="#2563eb">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="profileName" class="form-label">Nome Completo</label>
+            <input type="text" id="profileName" class="input-control" required>
+          </div>
+
+          <div class="form-group">
+            <label for="profileEmail" class="form-label">E-mail Cadastrado</label>
+            <input type="email" id="profileEmail" class="input-control" disabled readonly>
+            <div class="profile-email-badge" id="profileEmailBadge">
+              <span class="badge-status-inline"><i data-lucide="check"></i> E-mail Confirmado</span>
+            </div>
+          </div>
+
+          <!-- Account Security Stats -->
+          <div class="account-meta-box">
+            <div class="meta-item">
+              <span class="meta-label">Conta Criada Em:</span>
+              <span class="meta-val" id="profileCreatedAt">--</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Último Login:</span>
+              <span class="meta-val" id="profileLastLogin">--</span>
+            </div>
+          </div>
+
+          <div class="modal-footer px-0 pb-0">
+            <button type="button" class="btn btn-secondary" data-close-modal="modalProfile">Fechar</button>
+            <button type="submit" class="btn btn-primary" id="btnSaveProfile">Salvar Alterações</button>
+          </div>
+        </form>
+
+        <!-- Tab Pane 2: Change Password -->
+        <form id="formChangePassword" class="profile-tab-pane">
+          <div class="form-group">
+            <label for="currentPassword" class="form-label">Senha Atual</label>
+            <input type="password" id="currentPassword" class="input-control" required placeholder="Digite sua senha atual">
+          </div>
+
+          <div class="form-group">
+            <label for="newPassword" class="form-label">Nova Senha</label>
+            <input type="password" id="newPassword" class="input-control" required placeholder="Mínimo 6 caracteres">
+          </div>
+
+          <div class="form-group">
+            <label for="confirmNewPassword" class="form-label">Confirmar Nova Senha</label>
+            <input type="password" id="confirmNewPassword" class="input-control" required placeholder="Repita a nova senha">
+          </div>
+
+          <div class="auth-alert" id="changePasswordAlert" style="display: none;"></div>
+
+          <div class="modal-footer px-0 pb-0">
+            <button type="button" class="btn btn-secondary" data-close-modal="modalProfile">Cancelar</button>
+            <button type="submit" class="btn btn-primary" id="btnChangePasswordSubmit">Atualizar Senha</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Verificação de E-mail (Aberto via Banner ou Perfil) -->
+  <div class="modal-overlay" id="modalStandaloneVerifyEmail">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="modal-title">Confirmar E-mail</h3>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalStandaloneVerifyEmail">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <form id="formStandaloneVerifyEmail">
+        <div class="modal-body">
+          <div class="verify-icon-banner pb-2">
+            <div class="verify-icon-circle">
+              <i data-lucide="mail-check"></i>
+            </div>
+            <p class="verify-description">
+              Digite o código de 6 dígitos enviado para:
+              <strong id="standaloneVerifyEmail">seu.email@exemplo.com</strong>
+            </p>
+          </div>
+
+          <div class="code-inputs-group">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit1" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit2" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit3" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit4" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit5" inputmode="numeric" pattern="[0-9]*">
+            <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit6" inputmode="numeric" pattern="[0-9]*">
+          </div>
+
+          <div class="code-demo-hint" id="stdCodeDemoHint">
+            <span>Código gerado: <strong id="stdDemoCodeValue">------</strong></span>
+            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher Código</button>
+          </div>
+
+          <div class="auth-alert" id="stdVerifyAlert" style="display: none;"></div>
+
+          <div class="resend-group mt-3 text-center">
+            <button type="button" class="btn-link" id="btnStdResendCode">
+              Reenviar Código (<span id="stdResendCountdown">30s</span>)
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="modalStandaloneVerifyEmail">Fechar</button>
+          <button type="submit" class="btn btn-primary">Verificar Agora</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Main JavaScript modules -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
