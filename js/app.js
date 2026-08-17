@@ -195,8 +195,12 @@ class App {
     const icon = document.getElementById('themeIcon');
     if (icon) {
       icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
-      UI.refreshIcons();
     }
+    const authIcon = document.getElementById('authThemeIcon');
+    if (authIcon) {
+      authIcon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+    }
+    UI.refreshIcons();
   }
 
   // Modais com animações suaves de abertura e fechamento
@@ -222,6 +226,11 @@ class App {
   // EVENT LISTENERS DE AUTENTICAÇÃO, SEGURANÇA E VALIDAÇÃO DE E-MAIL
   // ==========================================================================
   setupAuthEventListeners() {
+    // 0. Alternador de Modo Escuro / Claro no card de Autenticação
+    document.getElementById('btnAuthThemeToggle')?.addEventListener('click', () => {
+      this.toggleTheme();
+    });
+
     // 1. Alternador de Visibilidade de Senhas (Olho)
     document.getElementById('btnToggleLoginPassword')?.addEventListener('click', () => {
       UI.togglePasswordVisibility('loginPassword', 'iconLoginPassword');
@@ -426,6 +435,64 @@ class App {
       }
     });
 
+    // 9. Simulador de Caixa de Entrada de E-mail Recebido
+    const openSimulator = (code, email, name) => {
+      const activeUser = Auth.getCurrentUser();
+      const targetEmail = email || activeUser?.email || 'seu.email@exemplo.com';
+      const targetName = name || activeUser?.name || 'Usuário';
+      const targetCode = code || document.getElementById('demoCodeValue')?.textContent || '123456';
+
+      const recEl = document.getElementById('simEmailRecipient');
+      const greetEl = document.getElementById('simEmailGreeting');
+      const codeEl = document.getElementById('simEmailCodeDisplay');
+
+      if (recEl) recEl.textContent = targetEmail;
+      if (greetEl) greetEl.textContent = `Olá, ${targetName}! Seja bem-vindo ao Control DIN.`;
+      if (codeEl) codeEl.textContent = targetCode;
+
+      this.openModal('modalEmailSimulator');
+      UI.refreshIcons();
+    };
+
+    document.getElementById('btnOpenEmailSimulator')?.addEventListener('click', () => {
+      const code = document.getElementById('demoCodeValue')?.textContent;
+      const email = document.getElementById('verifyTargetEmail')?.textContent;
+      const user = Auth.getCurrentUser();
+      openSimulator(code, email, user?.name);
+    });
+
+    document.getElementById('btnStdOpenEmailSimulator')?.addEventListener('click', () => {
+      const code = document.getElementById('stdDemoCodeValue')?.textContent;
+      const email = document.getElementById('stdVerifyTargetEmail')?.textContent;
+      const user = Auth.getCurrentUser();
+      openSimulator(code, email, user?.name);
+    });
+
+    document.getElementById('btnClickActivateInEmail')?.addEventListener('click', () => {
+      const code = document.getElementById('simEmailCodeDisplay')?.textContent;
+      const user = Auth.getCurrentUser();
+      if (!user || !code || code === '------') return;
+
+      for (let i = 1; i <= 6; i++) {
+        const d = document.getElementById(`digit${i}`);
+        if (d) d.value = code[i - 1] || '';
+        const sd = document.getElementById(`stdDigit${i}`);
+        if (sd) sd.value = code[i - 1] || '';
+      }
+
+      const result = Auth.verifyEmail(user.id, code);
+      this.closeModal('modalEmailSimulator');
+      this.closeModal('modalStandaloneVerifyEmail');
+
+      if (result.success) {
+        UI.clearAuthAlert('verifyAlert');
+        this.onUserAuthenticated(Auth.getCurrentUser());
+        UI.showToast('🎉 E-mail ativado com sucesso através da mensagem de validação!', 'success');
+      } else {
+        UI.showToast(result.error, 'error');
+      }
+    });
+
     // Reenvio de Código com Cooldown (Formulário inicial)
     document.getElementById('btnResendCode')?.addEventListener('click', () => {
       const user = Auth.getCurrentUser();
@@ -434,6 +501,8 @@ class App {
       const res = Auth.resendVerificationCode(user.id);
       if (res.success) {
         document.getElementById('demoCodeValue').textContent = res.code;
+        const codeDisplay = document.getElementById('simEmailCodeDisplay');
+        if (codeDisplay) codeDisplay.textContent = res.code;
         this.startResendCooldownTimer('resendCountdown', 'btnResendCode');
         UI.showToast(res.message, 'info');
       }
