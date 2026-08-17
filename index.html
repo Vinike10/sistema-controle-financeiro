@@ -197,16 +197,11 @@
             <input type="text" maxlength="1" class="code-digit-input" id="digit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <!-- Demo Code Fast-Fill & Email Inbox Viewer -->
-          <div class="code-demo-hint" id="codeDemoHint">
-            <span>Código gerado no e-mail: <strong id="demoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código de segurança disparado para seu e-mail. Acesse sua caixa de entrada para obter o código de 6 dígitos.</span>
           </div>
-
-          <button type="button" class="btn btn-secondary btn-block" id="btnOpenEmailSimulator">
-            <i data-lucide="mail-open"></i>
-            <span>📬 Abrir Caixa de Entrada (Ver E-mail)</span>
-          </button>
 
           <div class="auth-alert" id="verifyAlert" style="display: none;"></div>
 
@@ -1332,15 +1327,11 @@
             <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <div class="code-demo-hint" id="stdCodeDemoHint">
-            <span>Código gerado no e-mail: <strong id="stdDemoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código disparado para seu e-mail. Acesse sua caixa de entrada para conferir.</span>
           </div>
-
-          <button type="button" class="btn btn-secondary btn-block mt-2 mb-2" id="btnStdOpenEmailSimulator">
-            <i data-lucide="mail-open"></i>
-            <span>📬 Abrir Caixa de Entrada (Ver E-mail)</span>
-          </button>
 
           <div class="auth-alert" id="stdVerifyAlert" style="display: none;"></div>
 
@@ -1355,74 +1346,6 @@
           <button type="submit" class="btn btn-primary">Verificar Agora</button>
         </div>
       </form>
-    </div>
-  </div>
-
-  <!-- Modal: Simulador de Caixa de Entrada de E-mail Recebido -->
-  <div class="modal-overlay" id="modalEmailSimulator">
-    <div class="modal-card modal-email-card">
-      <div class="modal-header">
-        <div class="email-client-header-title">
-          <i data-lucide="inbox"></i>
-          <span>Caixa de Entrada de E-mail (Simulação)</span>
-        </div>
-        <button class="btn-icon btn-modal-close" data-close-modal="modalEmailSimulator">
-          <i data-lucide="x"></i>
-        </button>
-      </div>
-      <div class="modal-body p-0">
-        <!-- Email Meta Information -->
-        <div class="email-message-meta">
-          <div class="email-meta-row">
-            <span class="email-meta-tag">De:</span>
-            <strong>seguranca@controldin.com</strong> &lt;Control DIN Segurança & Autenticação&gt;
-          </div>
-          <div class="email-meta-row">
-            <span class="email-meta-tag">Para:</span>
-            <span id="simEmailRecipient">seu.email@exemplo.com</span>
-          </div>
-          <div class="email-meta-row">
-            <span class="email-meta-tag">Assunto:</span>
-            <span class="font-semibold" id="simEmailSubject">🔐 Seu Token de Ativação do Control DIN</span>
-          </div>
-        </div>
-
-        <!-- Rendered HTML Email Body -->
-        <div class="email-html-wrapper">
-          <div class="email-template-box">
-            <div class="email-template-logo">
-              <div class="brand-icon">
-                <i data-lucide="wallet-cards"></i>
-              </div>
-              <span class="brand-title">Control <span class="brand-badge">DIN</span></span>
-            </div>
-
-            <h3 class="email-greeting" id="simEmailGreeting">Olá! Seja bem-vindo ao Control DIN.</h3>
-            <p class="email-body-text">
-              Para validar seu endereço de e-mail e garantir a segurança das suas finanças com criptografia local, utilize o código de 6 dígitos abaixo:
-            </p>
-
-            <div class="email-code-highlight">
-              <span class="email-code-digits" id="simEmailCodeDisplay">------</span>
-              <span class="email-code-timer">⏱️ Código válido por 15 minutos</span>
-            </div>
-
-            <div class="email-cta-box">
-              <button type="button" class="btn btn-primary btn-lg btn-block" id="btnClickActivateInEmail">
-                <i data-lucide="check-circle"></i>
-                <span>✅ Confirmar Meu E-mail com 1 Clique</span>
-              </button>
-            </div>
-
-            <p class="email-footer-warning">
-              Se você não solicitou este cadastro, ignore esta mensagem. Nenhuma senha ou informação financeira é enviada em texto simples.
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-close-modal="modalEmailSimulator">Fechar E-mail</button>
-      </div>
     </div>
   </div>
 

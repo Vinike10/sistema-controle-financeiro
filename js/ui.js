@@ -911,16 +911,13 @@ const UI = {
   },
 
   // Abre modal de verificação avulso
-  openStandaloneVerifyModal(user, code = null) {
+  openStandaloneVerifyModal(user) {
     if (!user) return;
     const modal = document.getElementById('modalStandaloneVerifyEmail');
     if (!modal) return;
 
     const emailEl = document.getElementById('standaloneVerifyEmail');
-    const codeEl = document.getElementById('stdDemoCodeValue');
-
     if (emailEl) emailEl.textContent = user.email;
-    if (codeEl) codeEl.textContent = code || user.verificationCode || '------';
 
     // Limpa inputs de dígito
     for (let i = 1; i <= 6; i++) {

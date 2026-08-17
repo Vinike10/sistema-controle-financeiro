@@ -353,12 +353,11 @@ class App {
           // Redireciona para tela de confirmação de código de 6 dígitos
           UI.switchAuthTab('verify');
           document.getElementById('verifyTargetEmail').textContent = result.user.email;
-          document.getElementById('demoCodeValue').textContent = result.verificationCode;
           
           this.startResendCooldownTimer('resendCountdown', 'btnResendCode');
           this.setup6DigitCodeAutoAdvance('');
 
-          UI.showToast(`Código de confirmação: ${result.verificationCode}`, 'info');
+          UI.showToast('📨 Enviamos um código de 6 dígitos para seu e-mail! Verifique sua caixa de entrada.', 'info');
         } else {
           UI.setAuthAlert('regAlert', result.error, 'danger');
         }
@@ -375,29 +374,6 @@ class App {
     this.setup6DigitCodeAutoAdvance('');
     this.setup6DigitCodeAutoAdvance('std');
 
-    // Botão de auto-preenchimento para demonstração
-    document.getElementById('btnAutoFillCode')?.addEventListener('click', () => {
-      const code = document.getElementById('demoCodeValue').textContent;
-      if (code && code !== '------') {
-        for (let i = 1; i <= 6; i++) {
-          const d = document.getElementById(`digit${i}`);
-          if (d) d.value = code[i - 1] || '';
-        }
-        document.getElementById('digit6')?.focus();
-      }
-    });
-
-    document.getElementById('btnStdAutoFillCode')?.addEventListener('click', () => {
-      const code = document.getElementById('stdDemoCodeValue').textContent;
-      if (code && code !== '------') {
-        for (let i = 1; i <= 6; i++) {
-          const d = document.getElementById(`stdDigit${i}`);
-          if (d) d.value = code[i - 1] || '';
-        }
-        document.getElementById('stdDigit6')?.focus();
-      }
-    });
-
     // Submit da Validação de E-mail (Tela inicial pós cadastro)
     document.getElementById('formVerifyEmail')?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -407,6 +383,11 @@ class App {
       let code = '';
       for (let i = 1; i <= 6; i++) {
         code += document.getElementById(`digit${i}`)?.value || '';
+      }
+
+      if (code.length !== 6) {
+        UI.setAuthAlert('verifyAlert', 'Por favor, insira todos os 6 dígitos do código recebido no e-mail.', 'warning');
+        return;
       }
 
       const result = Auth.verifyEmail(user.id, code);
@@ -428,64 +409,6 @@ class App {
       }
     });
 
-    // 9. Simulador de Caixa de Entrada de E-mail Recebido
-    const openSimulator = (code, email, name) => {
-      const activeUser = Auth.getCurrentUser();
-      const targetEmail = email || activeUser?.email || 'seu.email@exemplo.com';
-      const targetName = name || activeUser?.name || 'Usuário';
-      const targetCode = code || document.getElementById('demoCodeValue')?.textContent || '123456';
-
-      const recEl = document.getElementById('simEmailRecipient');
-      const greetEl = document.getElementById('simEmailGreeting');
-      const codeEl = document.getElementById('simEmailCodeDisplay');
-
-      if (recEl) recEl.textContent = targetEmail;
-      if (greetEl) greetEl.textContent = `Olá, ${targetName}! Seja bem-vindo ao Control DIN.`;
-      if (codeEl) codeEl.textContent = targetCode;
-
-      this.openModal('modalEmailSimulator');
-      UI.refreshIcons();
-    };
-
-    document.getElementById('btnOpenEmailSimulator')?.addEventListener('click', () => {
-      const code = document.getElementById('demoCodeValue')?.textContent;
-      const email = document.getElementById('verifyTargetEmail')?.textContent;
-      const user = Auth.getCurrentUser();
-      openSimulator(code, email, user?.name);
-    });
-
-    document.getElementById('btnStdOpenEmailSimulator')?.addEventListener('click', () => {
-      const code = document.getElementById('stdDemoCodeValue')?.textContent;
-      const email = document.getElementById('stdVerifyTargetEmail')?.textContent;
-      const user = Auth.getCurrentUser();
-      openSimulator(code, email, user?.name);
-    });
-
-    document.getElementById('btnClickActivateInEmail')?.addEventListener('click', () => {
-      const code = document.getElementById('simEmailCodeDisplay')?.textContent;
-      const user = Auth.getCurrentUser();
-      if (!user || !code || code === '------') return;
-
-      for (let i = 1; i <= 6; i++) {
-        const d = document.getElementById(`digit${i}`);
-        if (d) d.value = code[i - 1] || '';
-        const sd = document.getElementById(`stdDigit${i}`);
-        if (sd) sd.value = code[i - 1] || '';
-      }
-
-      const result = Auth.verifyEmail(user.id, code);
-      this.closeModal('modalEmailSimulator');
-      this.closeModal('modalStandaloneVerifyEmail');
-
-      if (result.success) {
-        UI.clearAuthAlert('verifyAlert');
-        this.onUserAuthenticated(Auth.getCurrentUser());
-        UI.showToast('🎉 E-mail ativado com sucesso através da mensagem de validação!', 'success');
-      } else {
-        UI.showToast(result.error, 'error');
-      }
-    });
-
     // Reenvio de Código com Cooldown (Formulário inicial)
     document.getElementById('btnResendCode')?.addEventListener('click', () => {
       const user = Auth.getCurrentUser();
@@ -493,11 +416,8 @@ class App {
 
       const res = Auth.resendVerificationCode(user.id);
       if (res.success) {
-        document.getElementById('demoCodeValue').textContent = res.code;
-        const codeDisplay = document.getElementById('simEmailCodeDisplay');
-        if (codeDisplay) codeDisplay.textContent = res.code;
         this.startResendCooldownTimer('resendCountdown', 'btnResendCode');
-        UI.showToast(res.message, 'info');
+        UI.showToast('📨 Um novo código de verificação foi enviado para seu e-mail!', 'info');
       }
     });
 
@@ -510,6 +430,11 @@ class App {
       let code = '';
       for (let i = 1; i <= 6; i++) {
         code += document.getElementById(`stdDigit${i}`)?.value || '';
+      }
+
+      if (code.length !== 6) {
+        UI.setAuthAlert('stdVerifyAlert', 'Por favor, insira os 6 dígitos recebidos no e-mail.', 'warning');
+        return;
       }
 
       const result = Auth.verifyEmail(user.id, code);
@@ -529,9 +454,8 @@ class App {
 
       const res = Auth.resendVerificationCode(user.id);
       if (res.success) {
-        document.getElementById('stdDemoCodeValue').textContent = res.code;
         this.startResendCooldownTimer('stdResendCountdown', 'btnStdResendCode');
-        UI.showToast(res.message, 'info');
+        UI.showToast('📨 Novo código de verificação enviado para seu e-mail!', 'info');
       }
     });
 
