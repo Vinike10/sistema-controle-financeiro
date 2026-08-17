@@ -4,13 +4,6 @@
  * modais, validação de e-mail, skeletons de transição e carregamento progressivo.
  */
 
-import { Storage } from './storage.js';
-import { Auth } from './auth.js';
-import { Transactions } from './transactions.js';
-import { Accounts } from './accounts.js';
-import { Budgets, Goals } from './budgets.js';
-import { UI } from './ui.js';
-
 class App {
   constructor() {
     const today = new Date();

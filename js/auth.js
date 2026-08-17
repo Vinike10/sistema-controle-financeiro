@@ -11,7 +11,7 @@ const AUTH_STORAGE_KEYS = {
   REMEMBER: 'controldin_auth_remember_v1'
 };
 
-export const Auth = {
+const Auth = {
   // ==========================================================================
   // 1. Criptografia & Segurança (Web Crypto API)
   // ==========================================================================
@@ -540,3 +540,5 @@ export const Auth = {
     this.clearSession();
   }
 };
+
+window.Auth = Auth;
