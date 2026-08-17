@@ -349,11 +349,11 @@ const Storage = {
       const parsed = data ? JSON.parse(data) : {};
       return {
         serviceId: parsed.serviceId || 'service_rghx0s7',
-        templateId: parsed.templateId || '',
-        publicKey: parsed.publicKey || ''
+        templateId: parsed.templateId || 'template_default',
+        publicKey: parsed.publicKey || '2VRr8eSttp8KWw-Lv'
       };
     } catch {
-      return { serviceId: 'service_rghx0s7', templateId: '', publicKey: '' };
+      return { serviceId: 'service_rghx0s7', templateId: 'template_default', publicKey: '2VRr8eSttp8KWw-Lv' };
     }
   },
 
