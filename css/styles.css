@@ -3032,32 +3032,26 @@ html, body {
   background: var(--bg-surface);
 }
 
-.code-demo-hint {
+.email-sent-notice {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: var(--bg-surface-subtle);
-  border: 1px dashed var(--border-color);
-  padding: 0.5rem 0.85rem;
+  gap: 0.75rem;
+  background: var(--brand-primary-light);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--brand-primary);
+  padding: 0.85rem 1rem;
   border-radius: var(--radius-md);
-  font-size: 0.78rem;
-  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin: 0.5rem 0 1rem 0;
 }
 
-.btn-badge-action {
-  background: var(--brand-primary);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.2rem 0.6rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity var(--transition-fast);
-}
-
-.btn-badge-action:hover {
-  opacity: 0.9;
+.email-sent-notice i {
+  width: 22px;
+  height: 22px;
+  color: var(--brand-primary);
+  flex-shrink: 0;
 }
 
 .resend-group {
@@ -3067,140 +3061,6 @@ html, body {
   gap: 0.4rem;
   font-size: 0.8125rem;
   color: var(--text-secondary);
-}
-
-/* ==========================================================================
-   Email Inbox Simulator Modal
-   ========================================================================== */
-
-.modal-email-card {
-  max-width: 600px;
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-}
-
-.email-client-header-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  font-size: 1rem;
-}
-
-.email-message-meta {
-  background: var(--bg-surface-subtle);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0.85rem 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8125rem;
-}
-
-.email-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.email-meta-tag {
-  font-weight: 700;
-  color: var(--text-muted);
-  width: 50px;
-}
-
-.email-html-wrapper {
-  padding: 1.5rem;
-  background: #f8fafc;
-}
-
-.theme-dark .email-html-wrapper {
-  background: #0f172a;
-}
-
-.email-template-box {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-lg);
-  padding: 2rem 1.75rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  text-align: center;
-}
-
-.theme-dark .email-template-box {
-  background: #1e293b;
-  border-color: #334155;
-  color: #f1f5f9;
-}
-
-.email-template-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 1.25rem;
-}
-
-.email-greeting {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.theme-dark .email-greeting {
-  color: #f8fafc;
-}
-
-.email-body-text {
-  font-size: 0.875rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
-  margin-bottom: 1.25rem;
-}
-
-.theme-dark .email-body-text {
-  color: #cbd5e1;
-}
-
-.email-code-highlight {
-  background: var(--bg-surface-subtle);
-  border: 2px dashed var(--brand-primary);
-  border-radius: var(--radius-md);
-  padding: 1rem;
-  margin: 1rem 0 1.5rem 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.theme-dark .email-code-highlight {
-  background: #0f172a;
-}
-
-.email-code-digits {
-  font-size: 2.25rem;
-  font-weight: 900;
-  letter-spacing: 0.3em;
-  color: var(--brand-primary);
-  font-family: 'SF Mono', Monaco, Consolas, monospace;
-}
-
-.email-code-timer {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.email-cta-box {
-  margin: 1.25rem 0;
-}
-
-.email-footer-warning {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-top: 1rem;
 }
 
 

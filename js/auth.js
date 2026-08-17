@@ -283,8 +283,7 @@ const Auth = {
     return {
       success: true,
       user: newUser,
-      verificationCode, // Retornado para exibição de simulação/toast
-      message: 'Conta criada com sucesso! O código de verificação foi enviado para seu e-mail.'
+      message: 'Conta criada com sucesso! O código de validação de 6 dígitos foi enviado para seu e-mail.'
     };
   },
 
