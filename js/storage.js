@@ -4,8 +4,6 @@
  * migração automática, schema versionado, backup JSON e exportação CSV.
  */
 
-import { Auth } from './auth.js';
-
 const LEGACY_STORAGE_KEYS = {
   TRANSACTIONS: 'fintrack_transactions_v1',
   ACCOUNTS: 'fintrack_accounts_v1',
@@ -25,7 +23,7 @@ const GLOBAL_STORAGE_KEYS = {
 };
 
 // Categorias Padrão
-export const DEFAULT_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: 'cat-salario', name: 'Salário & Proventos', type: 'income', color: '#10b981', icon: 'banknote' },
   { id: 'cat-freelance', name: 'Freelance & Serviços', type: 'income', color: '#3b82f6', icon: 'laptop' },
   { id: 'cat-rendimentos', name: 'Investimentos & Rendimentos', type: 'income', color: '#8b5cf6', icon: 'trending-up' },
@@ -42,7 +40,7 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 // Contas Padrão
-export const DEFAULT_ACCOUNTS = [
+const DEFAULT_ACCOUNTS = [
   { id: 'acc-nubank', name: 'Nubank (Conta Corrente)', type: 'checking', initialBalance: 2450.00, color: '#8b5cf6' },
   { id: 'acc-itau', name: 'Itaú (Investimentos/Poupança)', type: 'savings', initialBalance: 12800.00, color: '#f97316' },
   { id: 'acc-cartao-master', name: 'Cartão de Crédito Black', type: 'credit', initialBalance: 0, color: '#1e293b', closingDay: 25, dueDay: 5, limit: 15000.00 },
@@ -50,7 +48,7 @@ export const DEFAULT_ACCOUNTS = [
 ];
 
 // Orçamentos Padrão
-export const DEFAULT_BUDGETS = [
+const DEFAULT_BUDGETS = [
   { id: 'bgt-1', categoryId: 'cat-alimentacao', monthlyLimit: 1600.00 },
   { id: 'bgt-2', categoryId: 'cat-transporte', monthlyLimit: 600.00 },
   { id: 'bgt-3', categoryId: 'cat-lazer', monthlyLimit: 500.00 },
@@ -58,15 +56,15 @@ export const DEFAULT_BUDGETS = [
 ];
 
 // Metas Padrão
-export const DEFAULT_GOALS = [
+const DEFAULT_GOALS = [
   { id: 'goal-1', title: 'Reserva de Emergência (6 Meses)', targetAmount: 30000.00, currentAmount: 18500.00, deadline: '2026-12-31', color: '#10b981' },
   { id: 'goal-2', title: 'Viagem de Férias', targetAmount: 8000.00, currentAmount: 4200.00, deadline: '2026-11-15', color: '#3b82f6' }
 ];
 
-export const Storage = {
+const Storage = {
   // Retorna o ID do usuário atualmente logado (ou 'usr-demo' como fallback)
   getActiveUserId() {
-    const user = Auth.getCurrentUser();
+    const user = (typeof Auth !== 'undefined') ? Auth.getCurrentUser() : null;
     return user ? user.id : 'usr-demo';
   },
 
@@ -342,5 +340,35 @@ export const Storage = {
   resetAllData() {
     const keys = ['transactions', 'accounts', 'categories', 'budgets', 'goals'];
     keys.forEach(k => localStorage.removeItem(this.getKey(k)));
+  },
+
+  // Obter configurações do EmailJS
+  getEmailSettings() {
+    try {
+      const data = localStorage.getItem('controldin_email_config_v1');
+      const parsed = data ? JSON.parse(data) : {};
+      return {
+        serviceId: parsed.serviceId || 'service_rghx0s7',
+        templateId: parsed.templateId || 'template_2apm937',
+        publicKey: parsed.publicKey || '2VRr8eSttp8KWw-Lv'
+      };
+    } catch {
+      return { serviceId: 'service_rghx0s7', templateId: 'template_2apm937', publicKey: '2VRr8eSttp8KWw-Lv' };
+    }
+  },
+
+  // Salvar configurações do EmailJS
+  saveEmailSettings(config) {
+    localStorage.setItem('controldin_email_config_v1', JSON.stringify({
+      serviceId: config.serviceId?.trim() || '',
+      templateId: config.templateId?.trim() || '',
+      publicKey: config.publicKey?.trim() || ''
+    }));
   }
 };
+
+window.Storage = Storage;
+window.DEFAULT_CATEGORIES = DEFAULT_CATEGORIES;
+window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
+window.DEFAULT_BUDGETS = DEFAULT_BUDGETS;
+window.DEFAULT_GOALS = DEFAULT_GOALS;

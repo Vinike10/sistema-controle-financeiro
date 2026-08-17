@@ -11,13 +11,20 @@
   <link rel="stylesheet" href="css/styles.css">
   <!-- Lucide Icons via unpkg -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- EmailJS SDK para envio de e-mails reais -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body class="theme-light">
   <!-- Auth Screen Overlay (Login / Cadastro / Validação de E-mail / Recuperação) -->
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-card-container">
       <div class="auth-card" id="authCard">
-        <!-- Auth Header / Brand -->
+        <!-- Auth Header / Brand & Theme Toggle -->
+        <div class="auth-header-top">
+          <button type="button" class="btn-icon btn-auth-theme-toggle" id="btnAuthThemeToggle" title="Alternar tema claro/escuro">
+            <i data-lucide="moon" id="authThemeIcon"></i>
+          </button>
+        </div>
         <div class="auth-header">
           <div class="brand-logo justify-center">
             <div class="brand-icon">
@@ -190,10 +197,10 @@
             <input type="text" maxlength="1" class="code-digit-input" id="digit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <!-- Demo Code Fast-Fill Hint -->
-          <div class="code-demo-hint" id="codeDemoHint">
-            <span>Código gerado na simulação: <strong id="demoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher Código</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código de segurança disparado para seu e-mail. Acesse sua caixa de entrada para obter o código de 6 dígitos.</span>
           </div>
 
           <div class="auth-alert" id="verifyAlert" style="display: none;"></div>
@@ -852,6 +859,52 @@
               </div>
             </div>
 
+            <!-- EmailJS Real Email Dispatch Integration Card -->
+            <div class="card full-width">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <h2 class="card-title">📨 Disparo Real de E-mails (EmailJS)</h2>
+                  <span class="card-subtitle">Conecte sua conta gratuita do <a href="https://www.emailjs.com/" target="_blank" class="btn-link">emailjs.com</a> para enviar e-mails de validação diretamente para qualquer caixa de entrada (Gmail, Outlook, etc.)</span>
+                </div>
+              </div>
+              <div class="card-body">
+                <form id="formEmailSettings" class="email-settings-form">
+                  <div class="form-grid-3">
+                    <div class="form-group">
+                      <label for="cfgEmailServiceId" class="form-label">Service ID</label>
+                      <input type="text" id="cfgEmailServiceId" class="input-control" value="service_rghx0s7" placeholder="ex: service_rghx0s7">
+                      <span class="input-hint">ID do seu serviço Outlook conectado no EmailJS</span>
+                    </div>
+                    <div class="form-group">
+                      <label for="cfgEmailTemplateId" class="form-label">Template ID</label>
+                      <input type="text" id="cfgEmailTemplateId" class="input-control" value="template_2apm937" placeholder="ex: template_2apm937">
+                      <span class="input-hint">ID do modelo de e-mail no EmailJS</span>
+                    </div>
+                    <div class="form-group">
+                      <label for="cfgEmailPublicKey" class="form-label">Public Key (User ID)</label>
+                      <input type="text" id="cfgEmailPublicKey" class="input-control" value="2VRr8eSttp8KWw-Lv" placeholder="ex: 2VRr8eSttp8KWw-Lv">
+                      <span class="input-hint">Chave pública em Account ➔ API Keys</span>
+                    </div>
+                  </div>
+
+                  <div class="email-settings-actions mt-3">
+                    <button type="submit" class="btn btn-primary" id="btnSaveEmailConfig">
+                      <i data-lucide="save"></i>
+                      <span>Salvar Configurações</span>
+                    </button>
+
+                    <div class="test-email-inline">
+                      <input type="email" id="inputTestEmail" class="input-control" placeholder="seu.email@gmail.com" style="max-width: 280px;">
+                      <button type="button" class="btn btn-secondary" id="btnSendTestEmail">
+                        <i data-lucide="send"></i>
+                        <span>Testar Envio Real</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            </div>
+
             <!-- GitHub Governance Rules Card -->
             <div class="card full-width">
               <div class="card-header">
@@ -1320,9 +1373,10 @@
             <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <div class="code-demo-hint" id="stdCodeDemoHint">
-            <span>Código gerado: <strong id="stdDemoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher Código</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código disparado para seu e-mail. Acesse sua caixa de entrada para conferir.</span>
           </div>
 
           <div class="auth-alert" id="stdVerifyAlert" style="display: none;"></div>
@@ -1344,7 +1398,14 @@
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Main JavaScript modules -->
-  <script type="module" src="js/app.js"></script>
+  <!-- Main JavaScript modules (Compatibilidade total com protocolo file:// e http://) -->
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/accounts.js"></script>
+  <script src="js/budgets.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

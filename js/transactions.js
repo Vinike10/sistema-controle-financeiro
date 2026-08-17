@@ -3,9 +3,7 @@
  * Gerencia lógica de negócios de receitas, despesas, parcelamentos e cálculos financeiros.
  */
 
-import { Storage } from './storage.js';
-
-export const Transactions = {
+const Transactions = {
   // Retorna todas as transações
   getAll() {
     return Storage.getTransactions();
@@ -234,3 +232,5 @@ export const Transactions = {
     return monthsData;
   }
 };
+
+window.Transactions = Transactions;
