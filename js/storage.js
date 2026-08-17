@@ -346,9 +346,14 @@ const Storage = {
   getEmailSettings() {
     try {
       const data = localStorage.getItem('controldin_email_config_v1');
-      return data ? JSON.parse(data) : { serviceId: '', templateId: '', publicKey: '' };
+      const parsed = data ? JSON.parse(data) : {};
+      return {
+        serviceId: parsed.serviceId || 'service_rghx0s7',
+        templateId: parsed.templateId || '',
+        publicKey: parsed.publicKey || ''
+      };
     } catch {
-      return { serviceId: '', templateId: '', publicKey: '' };
+      return { serviceId: 'service_rghx0s7', templateId: '', publicKey: '' };
     }
   },
 
