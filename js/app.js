@@ -1206,60 +1206,6 @@ class App {
       }
     });
 
-    // ==================== CONFIGURAÇÃO DO EMAILJS ====================
-    document.getElementById('formEmailSettings')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const serviceId = document.getElementById('cfgEmailServiceId').value.trim();
-      const templateId = document.getElementById('cfgEmailTemplateId').value.trim();
-      const publicKey = document.getElementById('cfgEmailPublicKey').value.trim();
-
-      Storage.saveEmailSettings({ serviceId, templateId, publicKey });
-      UI.showToast('Configurações do EmailJS salvas com sucesso!', 'success');
-    });
-
-    document.getElementById('btnSendTestEmail')?.addEventListener('click', async () => {
-      const testEmail = document.getElementById('inputTestEmail').value.trim();
-      if (!testEmail) {
-        UI.showToast('Por favor, digite um e-mail para receber o teste.', 'warning');
-        return;
-      }
-
-      // Salva configurações atuais antes do teste
-      const serviceId = document.getElementById('cfgEmailServiceId').value.trim();
-      const templateId = document.getElementById('cfgEmailTemplateId').value.trim();
-      const publicKey = document.getElementById('cfgEmailPublicKey').value.trim();
-      Storage.saveEmailSettings({ serviceId, templateId, publicKey });
-
-      if (!publicKey || !serviceId || !templateId) {
-        UI.showToast('Preencha Service ID, Template ID e Public Key antes de testar.', 'warning');
-        return;
-      }
-
-      const btn = document.getElementById('btnSendTestEmail');
-      btn.disabled = true;
-      btn.innerHTML = '<span>Enviando...</span>';
-      UI.showToast(`📨 Enviando e-mail de teste para ${testEmail}...`, 'info');
-
-      try {
-        const testCode = String(Math.floor(100000 + Math.random() * 900000));
-        const res = await Auth.sendRealEmail({
-          toEmail: testEmail,
-          toName: 'Usuário Teste',
-          code: testCode,
-          type: 'verification'
-        });
-
-        if (res.success) {
-          UI.showToast(`✅ E-mail enviado com sucesso para ${testEmail}! Verifique sua caixa de entrada.`, 'success');
-        } else {
-          UI.showToast(res.error || res.message, 'error');
-        }
-      } catch (err) {
-        UI.showToast(`Erro ao disparar: ${err.message}`, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="send"></i><span>Testar Envio Real</span>';
-        UI.refreshIcons();
       }
     });
 
