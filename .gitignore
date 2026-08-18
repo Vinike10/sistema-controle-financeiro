@@ -54,7 +54,22 @@ ehthumbs_vista.db
 .vscode/*
 !.vscode/launch.json
 
-# Diretórios de Ferramentas de IA e Assistentes Locais
+# Diretrizes e Instruções para Agentes de IA / Assistentes
+AGENTS.md
+[Aa]gents.md
+GEMINI.md
+CLAUDE.md
+CHATGPT.md
+*.agent.md
+*agent-instructions*
+.agents/
+.agent/
+.cursorrules
+.cursor/
+.windsurf/
+.windsurfrules
+copilot-instructions.md
+.github/copilot-instructions.md
 .gemini/
 .system_generated/
 scratch/
