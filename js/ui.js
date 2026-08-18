@@ -4,16 +4,10 @@
  * contadores numéricos animados e animações escalonadas (staggered).
  */
 
-import { Storage } from './storage.js';
-import { Transactions } from './transactions.js';
-import { Accounts } from './accounts.js';
-import { Budgets, Goals } from './budgets.js';
-import { Charts } from './charts.js';
-
 // Cache para interpolação de contadores
 const numericValuesCache = new Map();
 
-export const UI = {
+const UI = {
   // Inicialização e atualização de ícones Lucide
   refreshIcons() {
     if (window.lucide) {
@@ -917,16 +911,13 @@ export const UI = {
   },
 
   // Abre modal de verificação avulso
-  openStandaloneVerifyModal(user, code = null) {
+  openStandaloneVerifyModal(user) {
     if (!user) return;
     const modal = document.getElementById('modalStandaloneVerifyEmail');
     if (!modal) return;
 
     const emailEl = document.getElementById('standaloneVerifyEmail');
-    const codeEl = document.getElementById('stdDemoCodeValue');
-
     if (emailEl) emailEl.textContent = user.email;
-    if (codeEl) codeEl.textContent = code || user.verificationCode || '------';
 
     // Limpa inputs de dígito
     for (let i = 1; i <= 6; i++) {
@@ -939,4 +930,6 @@ export const UI = {
     this.refreshIcons();
   }
 };
+
+window.UI = UI;
 

@@ -3,10 +3,7 @@
  * Gerencia limites mensais de gastos por categoria e metas de economia / objetivos.
  */
 
-import { Storage } from './storage.js';
-import { Transactions } from './transactions.js';
-
-export const Budgets = {
+const Budgets = {
   // Retorna todos os orçamentos
   getAll() {
     return Storage.getBudgets();
@@ -83,7 +80,7 @@ export const Budgets = {
   }
 };
 
-export const Goals = {
+const Goals = {
   getAll() {
     return Storage.getGoals();
   },
@@ -160,3 +157,6 @@ export const Goals = {
     });
   }
 };
+
+window.Budgets = Budgets;
+window.Goals = Goals;

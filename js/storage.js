@@ -4,8 +4,6 @@
  * migração automática, schema versionado, backup JSON e exportação CSV.
  */
 
-import { Auth } from './auth.js';
-
 const LEGACY_STORAGE_KEYS = {
   TRANSACTIONS: 'fintrack_transactions_v1',
   ACCOUNTS: 'fintrack_accounts_v1',
@@ -25,7 +23,7 @@ const GLOBAL_STORAGE_KEYS = {
 };
 
 // Categorias Padrão
-export const DEFAULT_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id: 'cat-salario', name: 'Salário & Proventos', type: 'income', color: '#10b981', icon: 'banknote' },
   { id: 'cat-freelance', name: 'Freelance & Serviços', type: 'income', color: '#3b82f6', icon: 'laptop' },
   { id: 'cat-rendimentos', name: 'Investimentos & Rendimentos', type: 'income', color: '#8b5cf6', icon: 'trending-up' },
@@ -42,7 +40,7 @@ export const DEFAULT_CATEGORIES = [
 ];
 
 // Contas Padrão
-export const DEFAULT_ACCOUNTS = [
+const DEFAULT_ACCOUNTS = [
   { id: 'acc-nubank', name: 'Nubank (Conta Corrente)', type: 'checking', initialBalance: 2450.00, color: '#8b5cf6' },
   { id: 'acc-itau', name: 'Itaú (Investimentos/Poupança)', type: 'savings', initialBalance: 12800.00, color: '#f97316' },
   { id: 'acc-cartao-master', name: 'Cartão de Crédito Black', type: 'credit', initialBalance: 0, color: '#1e293b', closingDay: 25, dueDay: 5, limit: 15000.00 },
@@ -50,7 +48,7 @@ export const DEFAULT_ACCOUNTS = [
 ];
 
 // Orçamentos Padrão
-export const DEFAULT_BUDGETS = [
+const DEFAULT_BUDGETS = [
   { id: 'bgt-1', categoryId: 'cat-alimentacao', monthlyLimit: 1600.00 },
   { id: 'bgt-2', categoryId: 'cat-transporte', monthlyLimit: 600.00 },
   { id: 'bgt-3', categoryId: 'cat-lazer', monthlyLimit: 500.00 },
@@ -58,15 +56,15 @@ export const DEFAULT_BUDGETS = [
 ];
 
 // Metas Padrão
-export const DEFAULT_GOALS = [
+const DEFAULT_GOALS = [
   { id: 'goal-1', title: 'Reserva de Emergência (6 Meses)', targetAmount: 30000.00, currentAmount: 18500.00, deadline: '2026-12-31', color: '#10b981' },
   { id: 'goal-2', title: 'Viagem de Férias', targetAmount: 8000.00, currentAmount: 4200.00, deadline: '2026-11-15', color: '#3b82f6' }
 ];
 
-export const Storage = {
+const Storage = {
   // Retorna o ID do usuário atualmente logado (ou 'usr-demo' como fallback)
   getActiveUserId() {
-    const user = Auth.getCurrentUser();
+    const user = (typeof Auth !== 'undefined') ? Auth.getCurrentUser() : null;
     return user ? user.id : 'usr-demo';
   },
 
@@ -342,5 +340,261 @@ export const Storage = {
   resetAllData() {
     const keys = ['transactions', 'accounts', 'categories', 'budgets', 'goals'];
     keys.forEach(k => localStorage.removeItem(this.getKey(k)));
+  },
+
+  // Baixar Planilha Modelo (CSV) para o usuário preencher
+  downloadModelCSV() {
+    const headers = ['Data', 'Descricao', 'Valor', 'Tipo', 'Categoria', 'Conta', 'Status', 'Observacoes'];
+    const sampleRows = [
+      ['2026-08-10', 'Supermercado Semanal', '350,50', 'expense', 'Alimentação & Mercado', 'Conta Principal', 'paid', 'Compras do mês'],
+      ['2026-08-05', 'Salário / Pró-labore', '4800,00', 'income', 'Salário & Proventos', 'Conta Principal', 'paid', 'Salário mensal'],
+      ['2026-08-12', 'Abastecimento Posto Gasolina', '180,00', 'expense', 'Transporte & Combustível', 'Conta Principal', 'paid', 'Etanol'],
+      ['2026-08-15', 'Internet Fibra Óptica', '129,90', 'expense', 'Moradia & Contas', 'Conta Principal', 'paid', 'Mensalidade'],
+      ['2026-08-20', 'Serviço Freelance / Consultoria', '1250,00', 'income', 'Freelance & Serviços', 'Conta Principal', 'pending', 'A receber']
+    ];
+
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(';'), ...sampleRows.map(r => r.join(';'))].join('\n');
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", encodeURI(csvContent));
+    downloadAnchor.setAttribute("download", "ControlDIN_Planilha_Modelo.csv");
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  },
+
+  // Parser inteligente de texto CSV para lista de transações
+  parseCSVTransactions(csvText, defaultAccountId = null) {
+    if (!csvText || typeof csvText !== 'string') {
+      return { success: false, error: 'O arquivo CSV está vazio ou inválido.' };
+    }
+
+    const lines = csvText.split(/\r?\n/).filter(line => line.trim().length > 0);
+    if (lines.length < 2) {
+      return { success: false, error: 'O arquivo deve conter ao menos um cabeçalho e uma linha de dados.' };
+    }
+
+    // Detecta separador (; ou , ou \t)
+    const firstLine = lines[0];
+    const semiCount = (firstLine.match(/;/g) || []).length;
+    const commaCount = (firstLine.match(/,/g) || []).length;
+    const tabCount = (firstLine.match(/\t/g) || []).length;
+    const sep = (tabCount > semiCount && tabCount > commaCount) ? '\t' : (semiCount >= commaCount ? ';' : ',');
+
+    // Limpa aspas e quebra linha
+    const splitCSVLine = (line) => {
+      const result = [];
+      let cur = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (c === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (c === sep && !inQuotes) {
+          result.push(cur.trim());
+          cur = '';
+        } else {
+          cur += c;
+        }
+      }
+      result.push(cur.trim());
+      return result;
+    };
+
+    const header = splitCSVLine(lines[0]).map(h => h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
+    
+    // Mapeamento de índices de colunas
+    const colIdx = {
+      date: header.findIndex(h => h.includes('data') || h.includes('date') || h.includes('dia')),
+      desc: header.findIndex(h => h.includes('desc') || h.includes('historico') || h.includes('memo') || h.includes('nome') || h.includes('titulo')),
+      amount: header.findIndex(h => h.includes('valor') || h.includes('amount') || h.includes('value') || h.includes('quantia')),
+      type: header.findIndex(h => h.includes('tipo') || h.includes('type')),
+      category: header.findIndex(h => h.includes('categ') || h.includes('categoria')),
+      account: header.findIndex(h => h.includes('conta') || h.includes('banco') || h.includes('account')),
+      status: header.findIndex(h => h.includes('status') || h.includes('situacao')),
+      notes: header.findIndex(h => h.includes('obs') || h.includes('nota') || h.includes('detalhe'))
+    };
+
+    // Se não encontrou colunas essenciais por nome, tenta por ordem padrão (0: Data, 1: Descrição, 2: Valor)
+    if (colIdx.date === -1) colIdx.date = 0;
+    if (colIdx.desc === -1) colIdx.desc = 1;
+    if (colIdx.amount === -1) colIdx.amount = 2;
+
+    const categories = this.getCategories();
+    const accounts = this.getAccounts();
+    const fallbackAccId = defaultAccountId || (accounts.length > 0 ? accounts[0].id : 'acc-default');
+
+    const parsedTransactions = [];
+    const errors = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = splitCSVLine(lines[i]);
+      if (cols.length === 0 || (cols.length === 1 && !cols[0])) continue;
+
+      try {
+        const rawDate = cols[colIdx.date] || '';
+        const rawDesc = cols[colIdx.desc] || `Transação importada #${i}`;
+        const rawAmount = cols[colIdx.amount] || '0';
+        const rawType = (colIdx.type !== -1 && cols[colIdx.type]) ? cols[colIdx.type].toLowerCase() : '';
+        const rawCategory = (colIdx.category !== -1 && cols[colIdx.category]) ? cols[colIdx.category] : '';
+        const rawAccount = (colIdx.account !== -1 && cols[colIdx.account]) ? cols[colIdx.account] : '';
+        const rawStatus = (colIdx.status !== -1 && cols[colIdx.status]) ? cols[colIdx.status].toLowerCase() : 'paid';
+        const rawNotes = (colIdx.notes !== -1 && cols[colIdx.notes]) ? cols[colIdx.notes] : '';
+
+        // 1. Normalização de Data
+        let isoDate = new Date().toISOString().slice(0, 10);
+        if (rawDate) {
+          const dParts = rawDate.replace(/\//g, '-').split('-');
+          if (dParts.length === 3) {
+            if (dParts[0].length === 4) {
+              // YYYY-MM-DD
+              isoDate = `${dParts[0]}-${dParts[1].padStart(2, '0')}-${dParts[2].padStart(2, '0')}`;
+            } else if (dParts[2].length === 4) {
+              // DD-MM-YYYY
+              isoDate = `${dParts[2]}-${dParts[1].padStart(2, '0')}-${dParts[0].padStart(2, '0')}`;
+            }
+          }
+        }
+
+        // 2. Normalização do Valor (Trata R$, espaços, pontos de milhar e vírgula decimal)
+        let cleanValStr = rawAmount.replace(/[^\d.,\-+]/g, '').trim();
+        let isNegative = cleanValStr.startsWith('-') || cleanValStr.includes('(');
+        cleanValStr = cleanValStr.replace(/[\-\+\(\)]/g, '');
+
+        if (cleanValStr.includes(',') && cleanValStr.includes('.')) {
+          // Ex: 1.250,50 ou 1,250.50
+          if (cleanValStr.lastIndexOf(',') > cleanValStr.lastIndexOf('.')) {
+            cleanValStr = cleanValStr.replace(/\./g, '').replace(',', '.');
+          } else {
+            cleanValStr = cleanValStr.replace(/,/g, '');
+          }
+        } else if (cleanValStr.includes(',')) {
+          cleanValStr = cleanValStr.replace(',', '.');
+        }
+
+        let numAmount = Math.abs(parseFloat(cleanValStr) || 0);
+
+        // 3. Determinação de Tipo (Receita vs Despesa)
+        let type = 'expense';
+        if (rawType.includes('rec') || rawType.includes('inc') || rawType.includes('cred') || rawType.includes('ganho')) {
+          type = 'income';
+        } else if (rawType.includes('desp') || rawType.includes('exp') || rawType.includes('deb')) {
+          type = 'expense';
+        } else if (isNegative) {
+          type = 'expense';
+        } else if (colIdx.type === -1 && !isNegative && cleanValStr) {
+          // Se não especificado e positivo, assume despesa exceto se o texto indicar ganho
+          const descLower = rawDesc.toLowerCase();
+          if (descLower.includes('salario') || descLower.includes('pix recebido') || descLower.includes('rendimento') || descLower.includes('venda')) {
+            type = 'income';
+          } else {
+            type = 'expense';
+          }
+        }
+
+        // 4. Mapeamento de Categoria
+        let categoryId = type === 'income' ? 'cat-outras-rec' : 'cat-outras-desp';
+        if (rawCategory) {
+          const catMatch = categories.find(c => c.name.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.name.toLowerCase()));
+          if (catMatch) categoryId = catMatch.id;
+        }
+
+        // 5. Mapeamento de Conta
+        let targetAccountId = fallbackAccId;
+        if (rawAccount) {
+          const accMatch = accounts.find(a => a.name.toLowerCase().includes(rawAccount.toLowerCase()) || rawAccount.toLowerCase().includes(a.name.toLowerCase()));
+          if (accMatch) targetAccountId = accMatch.id;
+        }
+
+        // 6. Status
+        let status = (rawStatus.includes('pend') || rawStatus.includes('agend')) ? 'pending' : 'paid';
+
+        parsedTransactions.push({
+          id: `tx-import-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+          description: rawDesc.slice(0, 100),
+          amount: Number(numAmount.toFixed(2)),
+          type,
+          categoryId,
+          accountId: targetAccountId,
+          date: isoDate,
+          status,
+          notes: rawNotes ? rawNotes.slice(0, 200) : 'Importado via planilha',
+          isRecurring: false,
+          isInstallment: false
+        });
+      } catch (err) {
+        errors.push(`Linha ${i + 1}: ${err.message}`);
+      }
+    }
+
+    return {
+      success: parsedTransactions.length > 0,
+      transactions: parsedTransactions,
+      totalCount: parsedTransactions.length,
+      errors: errors.slice(0, 5),
+      summary: {
+        totalIncome: parsedTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+        totalExpense: parsedTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+        countIncome: parsedTransactions.filter(t => t.type === 'income').length,
+        countExpense: parsedTransactions.filter(t => t.type === 'expense').length
+      }
+    };
+  },
+
+  // Salvar / Mesclar lote de transações importadas
+  importTransactions(transactionsToImport, mode = 'merge') {
+    if (!Array.isArray(transactionsToImport) || transactionsToImport.length === 0) {
+      return { success: false, message: 'Nenhuma transação para importar.' };
+    }
+
+    let currentTxs = this.getTransactions();
+
+    if (mode === 'replace') {
+      this.saveTransactions(transactionsToImport);
+    } else {
+      // Merge: junta transações preservando dados existentes
+      const merged = [...currentTxs, ...transactionsToImport];
+      this.saveTransactions(merged);
+    }
+
+    return {
+      success: true,
+      message: `🎉 ${transactionsToImport.length} transações foram importadas com sucesso!`,
+      count: transactionsToImport.length
+    };
+  },
+
+  // Obter configurações do EmailJS
+  getEmailSettings() {
+    try {
+      const data = localStorage.getItem('controldin_email_config_v1');
+      const parsed = data ? JSON.parse(data) : {};
+      return {
+        serviceId: parsed.serviceId || 'service_rghx0s7',
+        templateId: parsed.templateId || 'template_2apm937',
+        publicKey: parsed.publicKey || '2VRr8eSttp8KWw-Lv'
+      };
+    } catch {
+      return { serviceId: 'service_rghx0s7', templateId: 'template_2apm937', publicKey: '2VRr8eSttp8KWw-Lv' };
+    }
+  },
+
+  // Salvar configurações do EmailJS
+  saveEmailSettings(config) {
+    localStorage.setItem('controldin_email_config_v1', JSON.stringify({
+      serviceId: config.serviceId?.trim() || '',
+      templateId: config.templateId?.trim() || '',
+      publicKey: config.publicKey?.trim() || ''
+    }));
   }
 };
+
+window.Storage = Storage;
+window.DEFAULT_CATEGORIES = DEFAULT_CATEGORIES;
+window.DEFAULT_ACCOUNTS = DEFAULT_ACCOUNTS;
+window.DEFAULT_BUDGETS = DEFAULT_BUDGETS;
+window.DEFAULT_GOALS = DEFAULT_GOALS;
