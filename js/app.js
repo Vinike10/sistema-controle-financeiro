@@ -27,23 +27,30 @@ class App {
   }
 
   async init() {
-    // 1. Inicializa o serviço de autenticação
-    await Auth.initAuth();
+    try {
+      // 1. Inicializa o serviço de autenticação
+      await Auth.initAuth();
 
-    // 2. Configura Tema Claro / Escuro
-    this.setupTheme();
+      // 2. Configura Tema Claro / Escuro
+      this.setupTheme();
 
-    // 3. Configura Event Listeners da Autenticação e do Sistema
-    this.setupAuthEventListeners();
-    this.setupEventListeners();
+      // 3. Configura Event Listeners da Autenticação e do Sistema
+      this.setupAuthEventListeners();
+      this.setupEventListeners();
 
-    // 4. Verifica se o usuário já possui sessão ativa
-    const currentUser = Auth.getCurrentUser();
-    if (currentUser) {
-      this.onUserAuthenticated(currentUser);
-    } else {
-      // Exibe tela de autenticação
-      UI.showAuthModal('login');
+      // 4. Verifica se o usuário já possui sessão ativa
+      const currentUser = Auth.getCurrentUser();
+      if (currentUser) {
+        this.onUserAuthenticated(currentUser);
+      } else {
+        // Exibe tela de autenticação
+        UI.showAuthModal('login');
+      }
+    } catch (err) {
+      console.error('Erro na inicialização:', err);
+      // Fallback: garante que a UI e período sejam exibidos mesmo em caso de erro isolado
+      this.updatePeriodDisplay();
+      UI.refreshIcons();
     }
 
     UI.refreshIcons();
@@ -51,13 +58,18 @@ class App {
 
   // Executado quando um usuário é autenticado com sucesso (Login, Cadastro ou Demo)
   onUserAuthenticated(user) {
-    UI.hideAuthModal();
-    Storage.init();
-    UI.updateUserProfileUI(user);
-    this.updatePeriodDisplay();
-    UI.populateSelects();
-    this.renderCurrentView();
-    UI.refreshIcons();
+    try {
+      UI.hideAuthModal();
+      Storage.init();
+      UI.updateUserProfileUI(user);
+      this.updatePeriodDisplay();
+      UI.populateSelects();
+      this.renderCurrentView();
+    } catch (err) {
+      console.error('Erro ao renderizar usuário autenticado:', err);
+    } finally {
+      UI.refreshIcons();
+    }
   }
 
   // Atualiza o texto do seletor de mês e ano no topo
