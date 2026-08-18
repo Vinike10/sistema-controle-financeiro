@@ -1141,12 +1141,16 @@
           </div>
 
           <div class="form-row" id="cardDetailsRow" style="display: none;">
-            <div class="form-group">
-              <label for="accClosingDay" class="form-label">Dia do Fechamento</label>
+            <div class="form-group flex-1">
+              <label for="accLimit" class="form-label">Limite Total (R$)</label>
+              <input type="number" step="0.01" id="accLimit" class="input-control text-right" placeholder="0,00">
+            </div>
+            <div class="form-group flex-1">
+              <label for="accClosingDay" class="form-label">Dia Fechamento</label>
               <input type="number" min="1" max="31" id="accClosingDay" class="input-control" placeholder="Ex: 25">
             </div>
-            <div class="form-group">
-              <label for="accDueDay" class="form-label">Dia do Vencimento</label>
+            <div class="form-group flex-1">
+              <label for="accDueDay" class="form-label">Dia Vencimento</label>
               <input type="number" min="1" max="31" id="accDueDay" class="input-control" placeholder="Ex: 5">
             </div>
           </div>

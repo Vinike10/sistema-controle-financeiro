@@ -842,6 +842,7 @@ class App {
       document.getElementById('formAccount').reset();
       document.getElementById('accId').value = '';
       document.getElementById('modalAccountTitle').textContent = 'Nova Conta / Cartão';
+      document.getElementById('accType').value = 'checking';
       document.getElementById('accColor').value = '#3b82f6';
       document.getElementById('cardDetailsRow').style.display = 'none';
       document.getElementById('accInitialBalance').parentElement.style.display = 'block';
@@ -861,6 +862,7 @@ class App {
       const type = document.getElementById('accType').value;
       const initialBalance = parseFloat(document.getElementById('accInitialBalance').value) || 0;
       const color = document.getElementById('accColor').value;
+      const limit = parseFloat(document.getElementById('accLimit')?.value) || 0;
       const closingDay = parseInt(document.getElementById('accClosingDay').value, 10) || null;
       const dueDay = parseInt(document.getElementById('accDueDay').value, 10) || null;
 
@@ -870,10 +872,10 @@ class App {
       }
 
       if (id) {
-        Accounts.update(id, { name, type, initialBalance, color, closingDay, dueDay });
+        Accounts.update(id, { name, type, initialBalance, color, limit, closingDay, dueDay });
         UI.showToast('Conta atualizada com sucesso!', 'success');
       } else {
-        Accounts.create({ name, type, initialBalance, color, closingDay, dueDay });
+        Accounts.create({ name, type, initialBalance, color, limit, closingDay, dueDay });
         UI.showToast('Conta criada com sucesso!', 'success');
       }
 
@@ -970,7 +972,7 @@ class App {
       }
     });
 
-    // ==================== DELEGAÇÃO DE EVENTOS PARA AÇÕES NA TABELA ====================
+    // ==================== DELEGAÇÃO DE EVENTOS PARA AÇÕES NA INTERFACE ====================
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
@@ -978,11 +980,11 @@ class App {
       const action = btn.dataset.action;
       const id = btn.dataset.id;
 
-      // Alternar status pago/pendente com 1 clique
-      if (action === 'toggle-tx-status') {
+      // Alternar status pago/pendente com 1 clique (tabela e dashboard)
+      if (action === 'toggle-tx-status' || action === 'toggle-status') {
         const tx = Transactions.toggleStatus(id);
         if (tx) {
-          UI.showToast(`Transação marcada como ${tx.status === 'paid' ? 'Paga' : 'Pendente'}.`, 'success');
+          UI.showToast(`Transação marcada como ${tx === 'paid' ? 'Paga' : 'Pendente'}.`, 'success');
           this.renderCurrentView(false);
         }
       }
@@ -1015,6 +1017,35 @@ class App {
         }
       }
 
+      // Editar Conta / Cartão
+      if (action === 'edit-account') {
+        const acc = Accounts.getById(id);
+        if (acc) {
+          document.getElementById('accId').value = acc.id;
+          document.getElementById('accName').value = acc.name;
+          document.getElementById('accType').value = acc.type;
+          document.getElementById('accInitialBalance').value = acc.initialBalance || 0;
+          document.getElementById('accColor').value = acc.color || '#3b82f6';
+          
+          const isCard = acc.type === 'credit';
+          document.getElementById('cardDetailsRow').style.display = isCard ? 'flex' : 'none';
+          document.getElementById('accInitialBalance').parentElement.style.display = isCard ? 'none' : 'block';
+          
+          if (isCard) {
+            document.getElementById('accLimit').value = acc.limit || '';
+            document.getElementById('accClosingDay').value = acc.closingDay || '';
+            document.getElementById('accDueDay').value = acc.dueDay || '';
+          } else {
+            document.getElementById('accLimit').value = '';
+            document.getElementById('accClosingDay').value = '';
+            document.getElementById('accDueDay').value = '';
+          }
+
+          document.getElementById('modalAccountTitle').textContent = 'Editar Conta / Cartão';
+          this.openModal('modalAccount');
+        }
+      }
+
       // Excluir Conta
       if (action === 'delete-account') {
         if (confirm('Deseja realmente excluir esta conta?')) {
@@ -1025,12 +1056,40 @@ class App {
         }
       }
 
+      // Editar Orçamento
+      if (action === 'edit-budget') {
+        const budget = Budgets.getById(id);
+        if (budget) {
+          document.getElementById('budgetId').value = budget.id;
+          document.getElementById('budgetCategory').value = budget.categoryId;
+          document.getElementById('budgetLimit').value = budget.monthlyLimit;
+          document.getElementById('modalBudgetTitle').textContent = 'Editar Orçamento de Categoria';
+          UI.populateSelects();
+          this.openModal('modalBudget');
+        }
+      }
+
       // Excluir Orçamento
       if (action === 'delete-budget') {
         if (confirm('Deseja excluir este orçamento de categoria?')) {
           Budgets.delete(id);
           UI.showToast('Orçamento excluído.', 'info');
           this.renderCurrentView(false);
+        }
+      }
+
+      // Editar Meta
+      if (action === 'edit-goal') {
+        const goal = Goals.getById(id);
+        if (goal) {
+          document.getElementById('goalId').value = goal.id;
+          document.getElementById('goalTitle').value = goal.title;
+          document.getElementById('goalTargetAmount').value = goal.targetAmount;
+          document.getElementById('goalCurrentAmount').value = goal.currentAmount || 0;
+          document.getElementById('goalDeadline').value = goal.deadline || '';
+          document.getElementById('goalColor').value = goal.color || '#10b981';
+          document.getElementById('modalGoalTitle').textContent = 'Editar Meta de Economia';
+          this.openModal('modalGoal');
         }
       }
 

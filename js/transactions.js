@@ -9,6 +9,17 @@ const Transactions = {
     return Storage.getTransactions();
   },
 
+  // Retorna transação por ID
+  getById(id) {
+    const all = this.getAll();
+    return all.find(t => t.id === id);
+  },
+
+  // Cria transação (alias)
+  create(txData, installments = 1) {
+    return this.add(txData, installments);
+  },
+
   // Retorna transações filtradas por Ano e Mês (ex: year = 2026, month = 8)
   getByPeriod(year, month) {
     const all = this.getAll();

@@ -9,6 +9,10 @@ const Budgets = {
     return Storage.getBudgets();
   },
 
+  getById(id) {
+    return this.getAll().find(b => b.id === id);
+  },
+
   add(budgetData) {
     const all = this.getAll();
     const newBudget = {
@@ -20,6 +24,10 @@ const Budgets = {
     all.push(newBudget);
     Storage.saveBudgets(all);
     return newBudget;
+  },
+
+  create(budgetData) {
+    return this.add(budgetData);
   },
 
   update(id, updatedFields) {
@@ -103,6 +111,10 @@ const Goals = {
     return newGoal;
   },
 
+  create(goalData) {
+    return this.add(goalData);
+  },
+
   update(id, updatedFields) {
     const all = this.getAll();
     const index = all.findIndex(g => g.id === id);
@@ -129,17 +141,17 @@ const Goals = {
   // Registra um aporte financeiro em uma meta de economia
   deposit(goalId, amount) {
     const goal = this.getById(goalId);
-    if (!goal) throw new Error("Meta não encontrada.");
+    if (!goal) return { success: false, message: "Meta não encontrada." };
 
     const depositAmount = Number(amount);
-    if (depositAmount <= 0) throw new Error("O valor do aporte deve ser maior que zero.");
+    if (depositAmount <= 0) return { success: false, message: "O valor do aporte deve ser maior que zero." };
 
     goal.currentAmount = (Number(goal.currentAmount) || 0) + depositAmount;
     goal.updatedAt = new Date().toISOString();
 
     const all = this.getAll().map(g => g.id === goalId ? goal : g);
     Storage.saveGoals(all);
-    return goal;
+    return { success: true, goal, message: `Aporte de R$ ${depositAmount.toFixed(2)} registrado com sucesso!` };
   },
 
   // Retorna metas com percentual calculado

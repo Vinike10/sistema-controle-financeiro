@@ -29,6 +29,10 @@ const Accounts = {
     return newAcc;
   },
 
+  create(accData) {
+    return this.add(accData);
+  },
+
   update(id, updatedFields) {
     const all = this.getAll();
     const index = all.findIndex(a => a.id === id);
@@ -39,6 +43,8 @@ const Accounts = {
       ...updatedFields,
       initialBalance: updatedFields.initialBalance !== undefined ? Number(updatedFields.initialBalance) : all[index].initialBalance,
       limit: updatedFields.limit !== undefined ? Number(updatedFields.limit) : all[index].limit,
+      closingDay: updatedFields.closingDay !== undefined ? (Number(updatedFields.closingDay) || null) : all[index].closingDay,
+      dueDay: updatedFields.dueDay !== undefined ? (Number(updatedFields.dueDay) || null) : all[index].dueDay,
       updatedAt: new Date().toISOString()
     };
 

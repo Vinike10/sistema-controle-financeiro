@@ -475,10 +475,13 @@ const UI = {
               <span class="legend-color-dot" style="background-color: ${b.categoryColor}"></span>
               ${b.categoryName}
             </span>
-            <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span class="budget-amounts ${b.status === 'danger' ? 'text-danger' : ''}">
                 Gasto: <strong>${this.formatCurrency(b.spent)}</strong> / Teto: <strong>${this.formatCurrency(b.monthlyLimit)}</strong>
               </span>
+              <button class="btn-icon btn-sm" data-action="edit-budget" data-id="${b.id}" title="Editar orçamento">
+                <i data-lucide="edit-2"></i>
+              </button>
               <button class="btn-icon btn-sm text-danger" data-action="delete-budget" data-id="${b.id}" title="Excluir orçamento">
                 <i data-lucide="trash-2"></i>
               </button>
@@ -523,9 +526,12 @@ const UI = {
                 <span style="font-size: 0.75rem; color: var(--text-muted);">
                   ${g.deadline ? `Prazo: ${this.formatDate(g.deadline)}` : 'Sem prazo'}
                 </span>
-                <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.35rem;">
                   <button class="btn btn-secondary btn-sm" data-action="deposit-goal" data-id="${g.id}">
                     <i data-lucide="plus"></i> Aporte
+                  </button>
+                  <button class="btn-icon btn-sm" data-action="edit-goal" data-id="${g.id}" title="Editar meta">
+                    <i data-lucide="edit-2"></i>
                   </button>
                   <button class="btn-icon btn-sm text-danger" data-action="delete-goal" data-id="${g.id}" title="Excluir meta">
                     <i data-lucide="trash-2"></i>
