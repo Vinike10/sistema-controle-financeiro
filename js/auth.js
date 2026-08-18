@@ -12,19 +12,6 @@ const AUTH_STORAGE_KEYS = {
 };
 
 const Auth = {
-  // Inicialização do serviço de autenticação
-  async initAuth() {
-    const users = this.getUsers();
-    if (!users || !Array.isArray(users)) {
-      this.saveUsers([]);
-    }
-    return true;
-  },
-
-  init() {
-    return this.initAuth();
-  },
-
   // ==========================================================================
   // 1. Criptografia & Segurança (Web Crypto API)
   // ==========================================================================
