@@ -23,6 +23,7 @@ class App {
     };
 
     this.parsedImportData = null;
+    this.parsedCloudRestorePayload = null;
   }
 
   async init() {
@@ -1203,10 +1204,169 @@ class App {
       }
     });
 
-    // ==================== BOTÃO DE BACKUP RÁPIDO NO HEADER ====================
-    document.getElementById('btnQuickBackupJSON')?.addEventListener('click', () => {
+    // ==================== CENTRAL DE BACKUP & NUVEM PESSOAL ====================
+    const openCloudBackupModal = () => {
+      const user = Auth.getCurrentUser();
+      const emailEl = document.getElementById('cloudBackupTargetEmail');
+      if (emailEl) emailEl.textContent = user?.email || 'seu.email@exemplo.com';
+
+      const lastDate = Storage.getLastBackupDate();
+      const lastDateEl = document.getElementById('cloudBackupLastDateText');
+      const badgeEl = document.getElementById('cloudBackupStatusBadge');
+
+      if (lastDate) {
+        const d = new Date(lastDate);
+        if (lastDateEl) lastDateEl.textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        if (badgeEl) {
+          badgeEl.className = 'badge-status-inline verified';
+          badgeEl.textContent = '✓ Protegido';
+        }
+      } else {
+        if (lastDateEl) lastDateEl.textContent = 'Nenhum backup recente registrado neste dispositivo.';
+        if (badgeEl) {
+          badgeEl.className = 'badge-status-inline warning';
+          badgeEl.textContent = 'Pendente';
+        }
+      }
+
+      this.switchBackupTab('export');
+      this.resetCloudRestoreState();
+      this.openModal('modalCloudBackup');
+      UI.refreshIcons();
+    };
+
+    document.getElementById('btnOpenCloudBackupModal')?.addEventListener('click', openCloudBackupModal);
+    document.getElementById('btnDropdownCloudBackup')?.addEventListener('click', () => {
+      document.getElementById('userMenuContainer')?.classList.remove('open');
+      openCloudBackupModal();
+    });
+
+    // Alternar abas dentro do modal de Backup (Exportar vs Restaurar)
+    document.querySelectorAll('[data-backup-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.switchBackupTab(btn.dataset.backupTab);
+      });
+    });
+
+    // 1. Ação: Enviar Backup por E-mail (Outlook / Hotmail)
+    document.getElementById('btnCloudSendEmail')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnCloudSendEmail');
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>Gerando relatório e enviando...</span>';
+
+      try {
+        const result = await Storage.sendBackupByEmail();
+        if (result.success) {
+          UI.showToast(result.message, 'success');
+          // Atualiza status na tela
+          const lastDate = Storage.getLastBackupDate();
+          const d = new Date(lastDate);
+          document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          document.getElementById('cloudBackupStatusBadge').className = 'badge-status-inline verified';
+          document.getElementById('cloudBackupStatusBadge').textContent = '✓ Protegido';
+        } else {
+          UI.showToast(result.error || 'Erro ao enviar por e-mail.', 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        UI.refreshIcons();
+      }
+    });
+
+    // 2. Ação: Salvar no Google Drive / Compartilhar
+    document.getElementById('btnCloudShareDrive')?.addEventListener('click', async () => {
+      const result = await Storage.shareBackupViaWebShare();
+      if (result.success) {
+        UI.showToast(result.message, 'success');
+        const lastDate = Storage.getLastBackupDate();
+        if (lastDate) {
+          const d = new Date(lastDate);
+          document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      } else if (!result.aborted) {
+        UI.showToast('Não foi possível compartilhar.', 'warning');
+      }
+    });
+
+    // 3. Ação: Baixar JSON
+    document.getElementById('btnCloudDownloadJSON')?.addEventListener('click', () => {
       Storage.exportBackupJSON();
-      UI.showToast('💾 Backup completo baixado com sucesso!', 'success');
+      UI.showToast('💾 Cópia de segurança (.JSON) baixada com sucesso!', 'success');
+      const lastDate = Storage.getLastBackupDate();
+      if (lastDate) {
+        const d = new Date(lastDate);
+        document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    });
+
+    // 4. Ação: Exportar CSV
+    document.getElementById('btnCloudExportCSV')?.addEventListener('click', () => {
+      Storage.exportTransactionsCSV();
+      UI.showToast('📊 Extrato (.CSV) baixado! Pronto para abrir no Excel.', 'success');
+    });
+
+    // 5. Restauração: Selecionar e Arrastar arquivo .JSON
+    document.getElementById('btnSelectCloudRestoreFile')?.addEventListener('click', () => {
+      document.getElementById('inputCloudRestoreFile').click();
+    });
+
+    const restoreDropzone = document.getElementById('cloudRestoreDropzone');
+    if (restoreDropzone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        restoreDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          restoreDropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        restoreDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          restoreDropzone.classList.remove('dragover');
+        });
+      });
+
+      restoreDropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          this.handleCloudRestoreFile(files[0]);
+        }
+      });
+    }
+
+    document.getElementById('inputCloudRestoreFile')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.handleCloudRestoreFile(file);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btnCancelCloudRestore')?.addEventListener('click', () => {
+      this.resetCloudRestoreState();
+    });
+
+    document.getElementById('btnExecuteCloudRestore')?.addEventListener('click', () => {
+      if (!this.parsedCloudRestorePayload) {
+        UI.showToast('Nenhum dado de backup pronto para restauração.', 'warning');
+        return;
+      }
+
+      const mode = document.querySelector('input[name="cloudRestoreMode"]:checked')?.value || 'replace';
+      const result = Storage.importBackupJSON(this.parsedCloudRestorePayload, mode);
+
+      if (result.success) {
+        this.closeModal('modalCloudBackup');
+        UI.showToast(result.message, 'success');
+        UI.populateSelects();
+        this.renderCurrentView(true);
+      } else {
+        UI.showToast(result.message, 'error');
+      }
     });
 
     // ==================== MODAL DE IMPORTAÇÃO DE PLANILHAS E JSON ====================
@@ -1454,6 +1614,90 @@ class App {
         <option value="${c.id}">${c.name}</option>
       `).join('');
     }
+  }
+
+  // Alterna entre abas do modal de Backup (Exportar vs Restaurar)
+  switchBackupTab(tabName) {
+    document.querySelectorAll('[data-backup-tab]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.backupTab === tabName);
+    });
+
+    const paneExport = document.getElementById('paneBackupExport');
+    const paneRestore = document.getElementById('paneBackupRestore');
+
+    if (paneExport && paneRestore) {
+      if (tabName === 'export') {
+        paneExport.style.display = 'block';
+        paneRestore.style.display = 'none';
+      } else {
+        paneExport.style.display = 'none';
+        paneRestore.style.display = 'block';
+      }
+    }
+    UI.refreshIcons();
+  }
+
+  // Reseta o estado da aba de restauração de backup
+  resetCloudRestoreState() {
+    this.parsedCloudRestorePayload = null;
+    const previewBox = document.getElementById('cloudRestorePreviewBox');
+    const alertBox = document.getElementById('cloudRestoreAlert');
+    if (previewBox) previewBox.style.display = 'none';
+    if (alertBox) alertBox.style.display = 'none';
+  }
+
+  // Processa o arquivo JSON de backup selecionado ou arrastado
+  handleCloudRestoreFile(file) {
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      UI.showToast('Por favor, selecione um arquivo de backup com extensão .JSON.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      const inspection = Storage.inspectBackupJSON(content);
+
+      const previewBox = document.getElementById('cloudRestorePreviewBox');
+      const alertBox = document.getElementById('cloudRestoreAlert');
+
+      if (inspection.valid) {
+        this.parsedCloudRestorePayload = inspection.payload;
+
+        if (alertBox) alertBox.style.display = 'none';
+        if (previewBox) previewBox.style.display = 'block';
+
+        const stats = inspection.stats;
+        document.getElementById('cloudRestoreTxCount').textContent = stats.transactionsCount;
+        document.getElementById('cloudRestoreAccCount').textContent = stats.accountsCount;
+        document.getElementById('cloudRestoreGoalsCount').textContent = stats.goalsCount;
+
+        const dateStr = inspection.exportDate && inspection.exportDate !== 'Data não identificada'
+          ? new Date(inspection.exportDate).toLocaleDateString('pt-BR')
+          : 'Data recente';
+        document.getElementById('cloudRestoreDateText').textContent = dateStr;
+
+        const userStr = inspection.user?.name ? `De: ${inspection.user.name}` : 'Backup do Control DIN';
+        document.getElementById('cloudRestoreUserText').textContent = userStr;
+
+        UI.showToast(`Arquivo de backup válido detectado com ${stats.transactionsCount} transações!`, 'info');
+      } else {
+        this.parsedCloudRestorePayload = null;
+        if (previewBox) previewBox.style.display = 'none';
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.className = 'auth-alert alert-danger';
+          alertBox.textContent = inspection.error || 'Arquivo de backup inválido ou corrompido.';
+        }
+        UI.showToast('O arquivo selecionado não é um backup válido.', 'error');
+      }
+
+      UI.refreshIcons();
+    };
+
+    reader.readAsText(file);
   }
 }
 

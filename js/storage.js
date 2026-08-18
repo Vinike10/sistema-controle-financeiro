@@ -251,46 +251,321 @@ const Storage = {
     this.saveTransactions(sampleData);
   },
 
+  // Gera objeto de backup estruturado completo com metadados e estatísticas
+  generateBackupPayload() {
+    const user = Auth.getCurrentUser();
+    const transactions = this.getTransactions();
+    const accounts = this.getAccounts();
+    const categories = this.getCategories();
+    const budgets = this.getBudgets();
+    const goals = this.getGoals();
+
+    const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+    const totalBalance = accounts.reduce((acc, a) => {
+      const txs = transactions.filter(t => t.accountId === a.id);
+      const inc = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const exp = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      return acc + (a.initialBalance || 0) + inc - exp;
+    }, 0);
+
+    return {
+      version: '1.2.0',
+      system: 'Control DIN',
+      exportDate: new Date().toISOString(),
+      user: user ? { id: user.id, email: user.email, name: user.name } : null,
+      stats: {
+        totalTransactions: transactions.length,
+        totalAccounts: accounts.length,
+        totalCategories: categories.length,
+        totalBudgets: budgets.length,
+        totalGoals: goals.length,
+        totalBalance: Number(totalBalance.toFixed(2)),
+        totalIncome: Number(totalIncome.toFixed(2)),
+        totalExpense: Number(totalExpense.toFixed(2))
+      },
+      transactions,
+      accounts,
+      categories,
+      budgets,
+      goals
+    };
+  },
+
+  // Obtém a data do último backup registrado
+  getLastBackupDate() {
+    const uid = this.getActiveUserId();
+    return localStorage.getItem(`controldin_${uid}_last_backup_date_v1`) || null;
+  },
+
+  // Atualiza a data do último backup realizado
+  updateLastBackupDate() {
+    const uid = this.getActiveUserId();
+    const now = new Date().toISOString();
+    localStorage.setItem(`controldin_${uid}_last_backup_date_v1`, now);
+    return now;
+  },
+
   // Exportar Backup Completo em JSON para o usuário atual
   exportBackupJSON() {
     const user = Auth.getCurrentUser();
-    const fullBackup = {
-      version: '1.1.0',
-      exportDate: new Date().toISOString(),
-      user: user ? { id: user.id, email: user.email, name: user.name } : null,
-      transactions: this.getTransactions(),
-      accounts: this.getAccounts(),
-      categories: this.getCategories(),
-      budgets: this.getBudgets(),
-      goals: this.getGoals()
-    };
+    const fullBackup = this.generateBackupPayload();
+    this.updateLastBackupDate();
 
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(fullBackup, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `ControlDIN_${user?.name?.replace(/\s+/g, '_') || 'Backup'}_${new Date().toISOString().slice(0,10)}.json`);
+    downloadAnchor.setAttribute("download", `ControlDIN_Backup_${user?.name?.replace(/\s+/g, '_') || 'Financas'}_${new Date().toISOString().slice(0,10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
+
+    return fullBackup;
   },
 
-  // Importar e Restaurar Backup JSON
-  importBackupJSON(jsonString) {
+  // Salvar no Google Drive / Compartilhar via Web Share API
+  async shareBackupViaWebShare() {
+    const user = Auth.getCurrentUser();
+    const fullBackup = this.generateBackupPayload();
+    this.updateLastBackupDate();
+
+    const fileName = `ControlDIN_Backup_${user?.name?.replace(/\s+/g, '_') || 'Financas'}_${new Date().toISOString().slice(0,10)}.json`;
+    const jsonBlob = new Blob([JSON.stringify(fullBackup, null, 2)], { type: 'application/json' });
+    const file = new File([jsonBlob], fileName, { type: 'application/json' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({
+          title: 'Backup Control DIN',
+          text: `Backup financeiro de ${user?.name || 'Control DIN'} gerado em ${new Date().toLocaleDateString('pt-BR')}. Salve no Google Drive, OneDrive ou envie com segurança.`,
+          files: [file]
+        });
+        return { success: true, method: 'share', message: 'Backup compartilhado com sucesso!' };
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return { success: false, aborted: true, message: 'Compartilhamento cancelado.' };
+        }
+      }
+    }
+
+    // Fallback: Baixa o arquivo e orienta salvar no Google Drive
+    this.exportBackupJSON();
+    return {
+      success: true,
+      method: 'download',
+      message: 'Arquivo de backup baixado! Você pode salvá-lo diretamente na sua pasta do Google Drive ou OneDrive.'
+    };
+  },
+
+  // Enviar Backup Completo e Resumo Consolidado por E-mail (Outlook / Hotmail / Gmail)
+  async sendBackupByEmail() {
+    const user = Auth.getCurrentUser();
+    if (!user || !user.email) {
+      return { success: false, error: 'Usuário não autenticado ou sem e-mail cadastrado.' };
+    }
+
+    const backup = this.generateBackupPayload();
+    this.updateLastBackupDate();
+
+    const currencyFormat = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+
+    const accountsSummary = backup.accounts.map(a => {
+      const txs = backup.transactions.filter(t => t.accountId === a.id);
+      const inc = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+      const exp = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+      const bal = (a.initialBalance || 0) + inc - exp;
+      return `  • ${a.name}: ${currencyFormat(bal)}`;
+    }).join('\n');
+
+    const goalsSummary = backup.goals.length > 0
+      ? backup.goals.map(g => `  • ${g.title}: ${currencyFormat(g.currentAmount)} / ${currencyFormat(g.targetAmount)} (${Math.min(100, Math.round((g.currentAmount / g.targetAmount) * 100))}%)`).join('\n')
+      : '  • Nenhuma meta cadastrada no momento.';
+
+    const formattedMessage = 
+`==================================================
+🛡️ RELATÓRIO DE BACKUP FINANCEIRO - CONTROL DIN
+==================================================
+
+Olá, ${user.name || 'Usuário'}!
+
+Este é o seu backup de segurança do Control DIN gerado em:
+📅 Data: ${new Date().toLocaleString('pt-BR')}
+👤 Conta: ${user.email}
+
+--------------------------------------------------
+📊 RESUMO FINANCEIRO CONSOLIDADO:
+--------------------------------------------------
+💰 Saldo Geral em Contas: ${currencyFormat(backup.stats.totalBalance)}
+🟢 Total de Receitas:     ${currencyFormat(backup.stats.totalIncome)}
+🔴 Total de Despesas:     ${currencyFormat(backup.stats.totalExpense)}
+📋 Total de Transações:   ${backup.stats.totalTransactions} registros
+
+🏦 SALDO POR CONTA:
+${accountsSummary}
+
+🎯 OBJETIVOS & METAS:
+${goalsSummary}
+
+--------------------------------------------------
+🔐 BLOCO DE DADOS DE SEGURANÇA (JSON):
+--------------------------------------------------
+Para restaurar seus dados caso troque de aparelho ou limpe o navegador:
+1. Abra o Control DIN.
+2. Acesse a Central de Backup & Nuvem > Restaurar.
+3. Cole ou importe os dados abaixo:
+
+${JSON.stringify(backup, null, 2)}
+
+--------------------------------------------------
+Control DIN - Gestão Financeira Inteligente e Segura`;
+
+    const subject = `🛡️ Cópia de Segurança & Resumo Financeiro - Control DIN (${new Date().toLocaleDateString('pt-BR')})`;
+
+    // Dispara via EmailJS se configurado
+    const emailConfig = this.getEmailSettings();
+    if (window.emailjs && emailConfig && emailConfig.serviceId && emailConfig.publicKey) {
+      try {
+        emailjs.init(emailConfig.publicKey);
+        const templateParams = {
+          to_email: user.email,
+          email: user.email,
+          reply_to: user.email,
+          to_name: user.name || 'Usuário',
+          from_name: 'Control DIN - Backup & Nuvem',
+          name: user.name || 'Usuário',
+          code: 'BACKUP',
+          subject: subject,
+          message: formattedMessage,
+          user_message: formattedMessage
+        };
+
+        const response = await emailjs.send(emailConfig.serviceId, emailConfig.templateId || 'template_2apm937', templateParams);
+        if (response.status === 200 || response.text === 'OK') {
+          return { success: true, message: `Backup e resumo financeiro enviados com sucesso para ${user.email}!` };
+        }
+      } catch (err) {
+        console.warn('Envio de backup via EmailJS:', err);
+      }
+    }
+
+    // Fallback via FormSubmit
     try {
-      const data = JSON.parse(jsonString);
-      if (!data.transactions || !Array.isArray(data.transactions)) {
-        throw new Error("Formato de backup inválido: lista de transações não encontrada.");
+      const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(user.email)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          _subject: subject,
+          _template: 'box',
+          'Sistema': 'Control DIN - Central de Backup',
+          'Destinatario': user.name || 'Usuário',
+          'Data_Backup': new Date().toLocaleString('pt-BR'),
+          'Saldo_Total': currencyFormat(backup.stats.totalBalance),
+          'Transacoes': backup.stats.totalTransactions,
+          'Contas': backup.stats.totalAccounts,
+          'Mensagem_Resumo': formattedMessage
+        })
+      });
+      if (response.ok) {
+        return { success: true, message: `Cópia de segurança enviada para ${user.email}!` };
+      }
+    } catch (e) {
+      console.warn('FormSubmit backup:', e);
+    }
+
+    return {
+      success: false,
+      error: 'Não foi possível disparar o e-mail automaticamente. Baixe a cópia em JSON ou configure as chaves do EmailJS.'
+    };
+  },
+
+  // Inspeciona e valida o arquivo JSON antes da restauração (sem alterar dados)
+  inspectBackupJSON(jsonString) {
+    try {
+      const data = typeof jsonString === 'string' ? JSON.parse(jsonString) : jsonString;
+      if (!data || typeof data !== 'object') {
+        return { valid: false, error: 'O arquivo não contém um objeto JSON válido.' };
       }
 
-      if (data.transactions) this.saveTransactions(data.transactions);
-      if (data.accounts) this.saveAccounts(data.accounts);
-      if (data.categories) this.saveCategories(data.categories);
-      if (data.budgets) this.saveBudgets(data.budgets);
-      if (data.goals) this.saveGoals(data.goals);
+      if (!data.transactions || !Array.isArray(data.transactions)) {
+        return { valid: false, error: 'Arquivo inválido: nenhuma lista de transações encontrada no backup.' };
+      }
 
-      return { success: true, message: "Backup restaurado com sucesso para a conta atual!" };
+      const txs = data.transactions;
+      const accounts = Array.isArray(data.accounts) ? data.accounts : [];
+      const categories = Array.isArray(data.categories) ? data.categories : [];
+      const budgets = Array.isArray(data.budgets) ? data.budgets : [];
+      const goals = Array.isArray(data.goals) ? data.goals : [];
+
+      const totalIncome = txs.filter(t => t.type === 'income').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+      const totalExpense = txs.filter(t => t.type === 'expense').reduce((acc, t) => acc + (Number(t.amount) || 0), 0);
+
+      return {
+        valid: true,
+        version: data.version || '1.0.0',
+        exportDate: data.exportDate || 'Data não identificada',
+        user: data.user || null,
+        stats: {
+          transactionsCount: txs.length,
+          accountsCount: accounts.length,
+          categoriesCount: categories.length,
+          budgetsCount: budgets.length,
+          goalsCount: goals.length,
+          totalIncome,
+          totalExpense,
+          netBalance: totalIncome - totalExpense
+        },
+        payload: data
+      };
     } catch (err) {
-      return { success: false, message: `Erro ao importar: ${err.message}` };
+      return { valid: false, error: `Falha na leitura do arquivo JSON: ${err.message}` };
+    }
+  },
+
+  // Importar e Restaurar Backup JSON (com suporte a modo mesclar ou substituir)
+  importBackupJSON(jsonStringOrObject, mode = 'replace') {
+    try {
+      const inspection = this.inspectBackupJSON(jsonStringOrObject);
+      if (!inspection.valid) {
+        return { success: false, message: inspection.error };
+      }
+
+      const data = inspection.payload;
+
+      if (mode === 'replace') {
+        if (data.transactions) this.saveTransactions(data.transactions);
+        if (data.accounts && data.accounts.length > 0) this.saveAccounts(data.accounts);
+        if (data.categories && data.categories.length > 0) this.saveCategories(data.categories);
+        if (data.budgets) this.saveBudgets(data.budgets);
+        if (data.goals) this.saveGoals(data.goals);
+      } else {
+        // Modo Merge (Mesclar)
+        const curTxs = this.getTransactions();
+        const curAccs = this.getAccounts();
+        const curGoals = this.getGoals();
+
+        // Evita duplicatas de IDs
+        const existingTxIds = new Set(curTxs.map(t => t.id));
+        const newTxs = (data.transactions || []).filter(t => !existingTxIds.has(t.id));
+        this.saveTransactions([...curTxs, ...newTxs]);
+
+        const existingAccIds = new Set(curAccs.map(a => a.id));
+        const newAccs = (data.accounts || []).filter(a => !existingAccIds.has(a.id));
+        if (newAccs.length > 0) this.saveAccounts([...curAccs, ...newAccs]);
+
+        const existingGoalIds = new Set(curGoals.map(g => g.id));
+        const newGoals = (data.goals || []).filter(g => !existingGoalIds.has(g.id));
+        if (newGoals.length > 0) this.saveGoals([...curGoals, ...newGoals]);
+      }
+
+      this.updateLastBackupDate();
+
+      return {
+        success: true,
+        message: `🎉 Backup restaurado com sucesso! (${inspection.stats.transactionsCount} transações, ${inspection.stats.accountsCount} contas)`,
+        stats: inspection.stats
+      };
+    } catch (err) {
+      return { success: false, message: `Erro ao restaurar backup: ${err.message}` };
     }
   },
 

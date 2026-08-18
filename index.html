@@ -382,9 +382,9 @@
               <i data-lucide="file-up"></i>
               <span>Importar</span>
             </button>
-            <button class="btn btn-secondary hide-mobile" id="btnQuickBackupJSON" title="Salvar e baixar backup completo dos dados">
-              <i data-lucide="save"></i>
-              <span>Salvar Backup</span>
+            <button class="btn btn-secondary hide-mobile" id="btnOpenCloudBackupModal" title="Central de Backup & Nuvem (E-mail, Google Drive, JSON)">
+              <i data-lucide="cloud"></i>
+              <span>Backup & Nuvem</span>
             </button>
             <button class="btn btn-secondary" id="btnOpenTransferModal">
               <i data-lucide="arrow-right-left"></i>
@@ -427,6 +427,10 @@
               <button class="dropdown-item" id="btnOpenProfileModal">
                 <i data-lucide="user-cog"></i>
                 <span>Meu Perfil & Segurança</span>
+              </button>
+              <button class="dropdown-item" id="btnDropdownCloudBackup">
+                <i data-lucide="cloud"></i>
+                <span>Central de Backup & Nuvem</span>
               </button>
               <button class="dropdown-item" id="btnDropdownVerifyEmail" style="display: none;">
                 <i data-lucide="shield-alert"></i>
@@ -1536,6 +1540,217 @@
           <button type="submit" class="btn btn-primary">Verificar Agora</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Modal: Central de Backup & Nuvem Pessoal -->
+  <div class="modal-overlay" id="modalCloudBackup">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title">☁️ Central de Backup & Nuvem Pessoal</h3>
+          <span class="modal-subtitle">Proteja suas finanças enviando cópias para seu e-mail, Google Drive ou baixando arquivos de segurança</span>
+        </div>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalCloudBackup">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Backup Modal Navigation Tabs -->
+      <div class="profile-modal-tabs">
+        <button type="button" class="profile-tab-btn active" data-backup-tab="export">
+          <i data-lucide="cloud-upload"></i> Salvar / Exportar na Nuvem
+        </button>
+        <button type="button" class="profile-tab-btn" data-backup-tab="restore">
+          <i data-lucide="cloud-download"></i> Restaurar Cópia de Segurança
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab Pane 1: Export / Cloud -->
+        <div class="backup-tab-pane active" id="paneBackupExport">
+          <!-- Last Backup Status Header -->
+          <div class="backup-status-banner">
+            <div class="backup-status-icon">
+              <i data-lucide="shield-check"></i>
+            </div>
+            <div class="backup-status-info">
+              <span class="backup-status-title">Status da Cópia de Segurança:</span>
+              <strong id="cloudBackupLastDateText">Carregando status...</strong>
+            </div>
+            <span class="badge-status-inline verified" id="cloudBackupStatusBadge">Local-First Protegido</span>
+          </div>
+
+          <!-- 4 Rich Action Cards Grid -->
+          <div class="cloud-backup-grid mt-3">
+            <!-- Card 1: E-mail (Outlook / Hotmail / Gmail) -->
+            <div class="cloud-option-card highlight-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon email-icon">
+                  <i data-lucide="mail"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Enviar Backup para meu E-mail</h4>
+                  <span class="cloud-card-badge">Outlook / Hotmail / Gmail</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Envia relatório financeiro consolidado completo e a chave de dados de backup direto para sua caixa de entrada:
+                <strong id="cloudBackupTargetEmail">usuario@email.com</strong>
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-primary w-100" id="btnCloudSendEmail">
+                  <i data-lucide="send"></i>
+                  <span>Enviar Cópia para meu E-mail</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 2: Google Drive / Web Share -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon drive-icon">
+                  <i data-lucide="hard-drive"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Salvar no Google Drive / Nuvem</h4>
+                  <span class="cloud-card-badge">Google Drive / OneDrive</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Gera o arquivo de segurança e abre as opções nativas do sistema para salvar na pasta do seu Google Drive, OneDrive ou compartilhamento seguro.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-secondary w-100" id="btnCloudShareDrive">
+                  <i data-lucide="upload-cloud"></i>
+                  <span>Salvar no Google Drive / Nuvem</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 3: Download JSON -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon json-icon">
+                  <i data-lucide="file-code-2"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Baixar Arquivo (.JSON)</h4>
+                  <span class="cloud-card-badge">Backup Completo</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Baixa arquivo codificado com todas as transações, contas bancárias, categorias, orçamentos e metas para guardar no computador ou pendrive.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-outline w-100" id="btnCloudDownloadJSON">
+                  <i data-lucide="download"></i>
+                  <span>Baixar Arquivo JSON</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 4: Export CSV -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon csv-icon">
+                  <i data-lucide="file-spreadsheet"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Exportar Extrato (.CSV)</h4>
+                  <span class="cloud-card-badge">Excel / Planilhas</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Baixa planilha de cálculo formatada com todos os lançamentos detalhados para abrir diretamente no Microsoft Excel ou Google Planilhas.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-outline w-100" id="btnCloudExportCSV">
+                  <i data-lucide="file-spreadsheet"></i>
+                  <span>Baixar Extrato (.CSV)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Pane 2: Restore / Drag & Drop -->
+        <div class="backup-tab-pane" id="paneBackupRestore" style="display: none;">
+          <div class="import-dropzone" id="cloudRestoreDropzone">
+            <div class="dropzone-icon">
+              <i data-lucide="file-up"></i>
+            </div>
+            <h4 class="dropzone-title">Arraste e solte o arquivo de backup (.JSON) aqui</h4>
+            <p class="dropzone-text">Ou clique no botão abaixo para selecionar o arquivo no seu computador, celular ou pasta do Drive</p>
+            <div class="dropzone-actions">
+              <button type="button" class="btn btn-primary" id="btnSelectCloudRestoreFile">
+                <i data-lucide="folder-open"></i>
+                <span>Selecionar Arquivo .JSON</span>
+              </button>
+            </div>
+            <input type="file" id="inputCloudRestoreFile" accept=".json" style="display: none;">
+          </div>
+
+          <!-- Restore Preview Box -->
+          <div class="import-preview-box mt-3" id="cloudRestorePreviewBox" style="display: none;">
+            <div class="preview-header">
+              <h4>Pré-visualização do Backup Detectado</h4>
+              <span class="badge-status-inline verified" id="cloudRestoreValidBadge">Backup Válido</span>
+            </div>
+
+            <div class="preview-kpi-grid">
+              <div class="prev-kpi-card income">
+                <span class="prev-kpi-label">Transações</span>
+                <strong id="cloudRestoreTxCount" class="text-success">0</strong>
+                <span class="prev-kpi-sub">lançamentos</span>
+              </div>
+              <div class="prev-kpi-card">
+                <span class="prev-kpi-label">Contas / Bancos</span>
+                <strong id="cloudRestoreAccCount">0</strong>
+                <span class="prev-kpi-sub">contas ativas</span>
+              </div>
+              <div class="prev-kpi-card">
+                <span class="prev-kpi-label">Metas & Orçamentos</span>
+                <strong id="cloudRestoreGoalsCount">0</strong>
+                <span class="prev-kpi-sub">metas configuradas</span>
+              </div>
+              <div class="prev-kpi-card net">
+                <span class="prev-kpi-label">Data do Backup</span>
+                <strong id="cloudRestoreDateText" style="font-size: 0.875rem;">--</strong>
+                <span class="prev-kpi-sub" id="cloudRestoreUserText">--</span>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="form-label">Modo de Restauração:</label>
+              <div class="import-mode-radios">
+                <label class="radio-label">
+                  <input type="radio" name="cloudRestoreMode" value="replace" checked>
+                  <span><strong>Substituir Base Atual</strong> (Restaura exatamente o estado do arquivo)</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="cloudRestoreMode" value="merge">
+                  <span><strong>Mesclar Dados</strong> (Combina com os registros atuais sem apagar novos lançamentos)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="modal-footer px-0 pb-0 mt-3">
+              <button type="button" class="btn btn-secondary" id="btnCancelCloudRestore">Cancelar Seleção</button>
+              <button type="button" class="btn btn-primary btn-lg" id="btnExecuteCloudRestore">
+                <i data-lucide="check-circle-2"></i>
+                <span>Confirmar Restauração</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-alert mt-2" id="cloudRestoreAlert" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalCloudBackup">Fechar</button>
+      </div>
     </div>
   </div>
 

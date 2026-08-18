@@ -3250,4 +3250,170 @@ html, body {
   color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   Central de Backup & Nuvem Pessoal Styles
+   ========================================================================== */
+
+.backup-tab-pane {
+  display: block;
+  animation: fadeIn var(--transition-normal);
+}
+
+.backup-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--bg-surface-subtle);
+  border: 1px solid var(--border-color);
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-lg);
+}
+
+.backup-status-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--brand-primary-light);
+  color: var(--brand-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.backup-status-icon i {
+  width: 24px;
+  height: 24px;
+}
+
+.backup-status-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.backup-status-title {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.backup-status-info strong {
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+}
+
+.cloud-backup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .cloud-backup-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cloud-option-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all var(--transition-fast);
+}
+
+.cloud-option-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-color-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.cloud-option-card.highlight-card {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: linear-gradient(145deg, var(--bg-surface), var(--brand-primary-light));
+}
+
+.cloud-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.875rem;
+}
+
+.cloud-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cloud-card-icon i {
+  width: 22px;
+  height: 22px;
+}
+
+.cloud-card-icon.email-icon {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
+.cloud-card-icon.drive-icon {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.cloud-card-icon.json-icon {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+}
+
+.cloud-card-icon.csv-icon {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.cloud-card-header h4 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.cloud-card-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-surface-subtle);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.cloud-card-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.cloud-card-desc strong {
+  color: var(--brand-primary);
+  word-break: break-all;
+}
+
+.cloud-card-actions {
+  margin-top: auto;
+}
+
+.w-100 {
+  width: 100%;
+}
+
+
 
