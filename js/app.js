@@ -1218,9 +1218,6 @@ class App {
       }
     });
 
-      }
-    });
-
     // ==================== CENTRAL DE BACKUP & NUVEM PESSOAL ====================
     const openCloudBackupModal = () => {
       const user = Auth.getCurrentUser();
