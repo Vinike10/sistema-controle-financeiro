@@ -51,8 +51,8 @@ ehthumbs_vista.db
 *.njsproj
 *.sln
 *.sw?
-.vscode/*
-!.vscode/launch.json
+.vscode/
+
 
 # Diretrizes e Instruções para Agentes de IA / Assistentes
 AGENTS.md
