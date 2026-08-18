@@ -1556,17 +1556,17 @@
         </button>
       </div>
 
-      <!-- Backup Modal Navigation Tabs -->
-      <div class="profile-modal-tabs">
-        <button type="button" class="profile-tab-btn active" data-backup-tab="export">
-          <i data-lucide="cloud-upload"></i> Salvar / Exportar na Nuvem
-        </button>
-        <button type="button" class="profile-tab-btn" data-backup-tab="restore">
-          <i data-lucide="cloud-download"></i> Restaurar Cópia de Segurança
-        </button>
-      </div>
-
       <div class="modal-body">
+        <!-- Backup Modal Navigation Tabs -->
+        <div class="profile-modal-tabs mb-4">
+          <button type="button" class="profile-tab-btn active" data-backup-tab="export">
+            <i data-lucide="cloud-upload"></i> Salvar / Exportar na Nuvem
+          </button>
+          <button type="button" class="profile-tab-btn" data-backup-tab="restore">
+            <i data-lucide="cloud-download"></i> Restaurar Cópia de Segurança
+          </button>
+        </div>
+
         <!-- Tab Pane 1: Export / Cloud -->
         <div class="backup-tab-pane active" id="paneBackupExport">
           <!-- Last Backup Status Header -->
@@ -1582,7 +1582,7 @@
           </div>
 
           <!-- 4 Rich Action Cards Grid -->
-          <div class="cloud-backup-grid mt-3">
+          <div class="cloud-backup-grid">
             <!-- Card 1: E-mail (Outlook / Hotmail / Gmail) -->
             <div class="cloud-option-card highlight-card">
               <div class="cloud-card-top">
@@ -1595,13 +1595,13 @@
                 </div>
               </div>
               <p class="cloud-card-desc">
-                Envia relatório financeiro consolidado completo e a chave de dados de backup direto para sua caixa de entrada:
-                <strong id="cloudBackupTargetEmail">usuario@email.com</strong>
+                Envia relatório financeiro consolidado e cópia codificada direto para sua caixa de entrada:
+                <span class="email-chip"><i data-lucide="at-sign"></i> <span id="cloudBackupTargetEmail">usuario@email.com</span></span>
               </p>
               <div class="cloud-card-actions">
                 <button type="button" class="btn btn-primary w-100" id="btnCloudSendEmail">
                   <i data-lucide="send"></i>
-                  <span>Enviar Cópia para meu E-mail</span>
+                  <span>Enviar Cópia para E-mail</span>
                 </button>
               </div>
             </div>
@@ -1613,17 +1613,17 @@
                   <i data-lucide="hard-drive"></i>
                 </div>
                 <div class="cloud-card-header">
-                  <h4>Salvar no Google Drive / Nuvem</h4>
+                  <h4>Salvar no Google Drive</h4>
                   <span class="cloud-card-badge">Google Drive / OneDrive</span>
                 </div>
               </div>
               <p class="cloud-card-desc">
-                Gera o arquivo de segurança e abre as opções nativas do sistema para salvar na pasta do seu Google Drive, OneDrive ou compartilhamento seguro.
+                Gera o arquivo de segurança e abre as opções nativas do sistema para salvar na pasta do seu Google Drive ou OneDrive.
               </p>
               <div class="cloud-card-actions">
                 <button type="button" class="btn btn-secondary w-100" id="btnCloudShareDrive">
                   <i data-lucide="upload-cloud"></i>
-                  <span>Salvar no Google Drive / Nuvem</span>
+                  <span>Salvar no Google Drive</span>
                 </button>
               </div>
             </div>
@@ -1635,12 +1635,12 @@
                   <i data-lucide="file-code-2"></i>
                 </div>
                 <div class="cloud-card-header">
-                  <h4>Baixar Arquivo (.JSON)</h4>
+                  <h4>Baixar Cópia (.JSON)</h4>
                   <span class="cloud-card-badge">Backup Completo</span>
                 </div>
               </div>
               <p class="cloud-card-desc">
-                Baixa arquivo codificado com todas as transações, contas bancárias, categorias, orçamentos e metas para guardar no computador ou pendrive.
+                Baixa arquivo codificado com todas as contas, transações, categorias e metas para guardar no computador ou pendrive.
               </p>
               <div class="cloud-card-actions">
                 <button type="button" class="btn btn-outline w-100" id="btnCloudDownloadJSON">
@@ -1662,7 +1662,7 @@
                 </div>
               </div>
               <p class="cloud-card-desc">
-                Baixa planilha de cálculo formatada com todos os lançamentos detalhados para abrir diretamente no Microsoft Excel ou Google Planilhas.
+                Baixa planilha de cálculo formatada com todos os lançamentos detalhados para abrir no Excel ou Google Planilhas.
               </p>
               <div class="cloud-card-actions">
                 <button type="button" class="btn btn-outline w-100" id="btnCloudExportCSV">

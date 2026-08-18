@@ -1628,9 +1628,9 @@ html, body {
 .modal-card {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
   box-shadow: var(--shadow-xl);
   max-height: 90vh;
   display: flex;
@@ -1639,16 +1639,27 @@ html, body {
   transform-origin: center;
 }
 
+.modal-card.modal-lg {
+  max-width: 880px;
+  width: min(94vw, 880px);
+}
+
+.modal-card.modal-xl {
+  max-width: 1060px;
+  width: min(96vw, 1060px);
+}
+
 .modal-header {
-  padding: 1.15rem 1.5rem;
+  padding: 1.25rem 1.75rem;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  background-color: var(--bg-surface);
 }
 
 .modal-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--text-primary);
 }
@@ -1658,19 +1669,43 @@ html, body {
   background: transparent;
   cursor: pointer;
   color: var(--text-muted);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
 }
 
 .btn-modal-close:hover {
+  background-color: var(--bg-surface-hover);
   color: var(--text-primary);
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.5rem 1.75rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color-strong) transparent;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-color-strong);
+  border-radius: 999px;
 }
 
 .modal-footer {
-  padding: 1rem 1.5rem;
+  padding: 1.15rem 1.75rem;
   border-top: 1px solid var(--border-color);
   background-color: var(--bg-surface-subtle);
   display: flex;
@@ -3251,8 +3286,12 @@ html, body {
 }
 
 /* ==========================================================================
-   Central de Backup & Nuvem Pessoal Styles
+   Central de Backup & Nuvem Pessoal Styles (Design System Premium)
    ========================================================================== */
+
+.modal-card.modal-lg .profile-modal-tabs {
+  margin: 0.25rem 0 1.25rem 0;
+}
 
 .backup-tab-pane {
   display: block;
@@ -3262,23 +3301,30 @@ html, body {
 .backup-status-banner {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+  gap: 1.25rem;
   background: var(--bg-surface-subtle);
   border: 1px solid var(--border-color);
-  padding: 1rem 1.25rem;
+  padding: 1.15rem 1.5rem;
   border-radius: var(--radius-lg);
+  margin-bottom: 1.5rem;
 }
 
 .backup-status-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   background: var(--brand-primary-light);
   color: var(--brand-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+body.theme-dark .backup-status-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
 }
 
 .backup-status-icon i {
@@ -3290,7 +3336,7 @@ html, body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
 }
 
 .backup-status-title {
@@ -3300,14 +3346,15 @@ html, body {
 }
 
 .backup-status-info strong {
-  font-size: 0.9375rem;
+  font-size: 0.95rem;
   color: var(--text-primary);
+  font-weight: 700;
 }
 
 .cloud-backup-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 @media (max-width: 768px) {
@@ -3320,44 +3367,53 @@ html, body {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  padding: 1.35rem;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 1rem;
   transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  min-height: 230px;
 }
 
 .cloud-option-card:hover {
   transform: translateY(-2px);
   border-color: var(--border-color-strong);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg);
 }
 
 .cloud-option-card.highlight-card {
-  border-color: rgba(37, 99, 235, 0.35);
-  background: linear-gradient(145deg, var(--bg-surface), var(--brand-primary-light));
+  border-color: rgba(37, 99, 235, 0.4);
+  background: linear-gradient(160deg, var(--bg-surface) 65%, rgba(37, 99, 235, 0.08) 100%);
+  box-shadow: 0 4px 20px -4px rgba(37, 99, 235, 0.15);
+}
+
+body.theme-dark .cloud-option-card.highlight-card {
+  background: linear-gradient(160deg, var(--bg-surface) 60%, rgba(37, 99, 235, 0.15) 100%);
+  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .cloud-card-top {
   display: flex;
   align-items: flex-start;
-  gap: 0.875rem;
+  gap: 1rem;
 }
 
 .cloud-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .cloud-card-icon i {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 
 .cloud-card-icon.email-icon {
@@ -3365,9 +3421,19 @@ html, body {
   color: #2563eb;
 }
 
+body.theme-dark .cloud-card-icon.email-icon {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
 .cloud-card-icon.drive-icon {
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
+}
+
+body.theme-dark .cloud-card-icon.drive-icon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
 }
 
 .cloud-card-icon.json-icon {
@@ -3375,40 +3441,91 @@ html, body {
   color: #8b5cf6;
 }
 
+body.theme-dark .cloud-card-icon.json-icon {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
 .cloud-card-icon.csv-icon {
   background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
 }
 
+body.theme-dark .cloud-card-icon.csv-icon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.cloud-card-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .cloud-card-header h4 {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 0.25rem;
+  line-height: 1.3;
+  margin: 0;
 }
 
 .cloud-card-badge {
-  font-size: 0.75rem;
+  display: inline-block;
+  font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-surface-subtle);
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem 0.55rem;
   border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  width: fit-content;
 }
 
 .cloud-card-desc {
-  font-size: 0.8125rem;
+  font-size: 0.835rem;
   color: var(--text-secondary);
   line-height: 1.5;
+  margin: 0.25rem 0 0.5rem 0;
+  flex: 1;
 }
 
-.cloud-card-desc strong {
+.email-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--brand-primary-light);
   color: var(--brand-primary);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+  border: 1px solid rgba(37, 99, 235, 0.25);
   word-break: break-all;
+}
+
+body.theme-dark .email-chip {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .cloud-card-actions {
   margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.cloud-card-actions .btn {
+  width: 100%;
+  padding: 0.7rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
 }
 
 .w-100 {
