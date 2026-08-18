@@ -122,7 +122,7 @@ class App {
           UI.renderReports(this.currentYear, this.currentMonth);
           break;
         case 'settings':
-          this.populateEmailSettings();
+          // Configurações e Backup
           break;
       }
     };
@@ -157,7 +157,7 @@ class App {
       accounts: { title: 'Contas & Cartões', sub: 'Gerenciamento de bancos, cartões de crédito e carteiras' },
       budgets: { title: 'Orçamentos & Metas', sub: 'Acompanhamento de tetos de gastos e objetivos' },
       reports: { title: 'Relatórios & Analytics', sub: 'Análise detalhada de evolução financeira' },
-      settings: { title: 'Configurações & Backup', sub: 'Exportação, importação e governança do projeto' }
+      settings: { title: 'Configurações & Backup', sub: 'Exportação, importação e gerenciamento da base de dados' }
     };
 
     if (titles[tabName]) {
