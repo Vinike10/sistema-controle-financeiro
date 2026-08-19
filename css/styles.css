@@ -166,6 +166,32 @@ html, body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  text-decoration: none;
+}
+
+.brand-logo-btn {
+  background: transparent;
+  border: none;
+  padding: 0.5rem 0.625rem;
+  margin: -0.5rem -0.625rem;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  outline: none;
+}
+
+.brand-logo-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.brand-logo-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--brand-primary);
+}
+
+.brand-logo-btn:active {
+  transform: scale(0.98);
 }
 
 .brand-icon {
@@ -1823,10 +1849,6 @@ html, body {
   .sidebar.open {
     transform: translateX(0);
     box-shadow: var(--shadow-xl);
-  }
-
-  .btn-close-sidebar {
-    display: flex;
   }
 
   .main-wrapper {

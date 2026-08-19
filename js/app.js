@@ -722,6 +722,11 @@ class App {
       });
     });
 
+    // Botão de Início no topo da Sidebar (Brand Logo)
+    document.getElementById('btnBrandHome')?.addEventListener('click', () => {
+      this.switchTab('dashboard');
+    });
+
     // Botões de atalho no Dashboard
     document.getElementById('btnGoToTransactions')?.addEventListener('click', () => this.switchTab('transactions'));
     document.getElementById('btnGoToBudgets')?.addEventListener('click', () => this.switchTab('budgets'));
@@ -751,11 +756,20 @@ class App {
     document.getElementById('btnThemeToggle')?.addEventListener('click', () => this.toggleTheme());
 
     // 4. Sidebar Mobile
-    document.getElementById('btnToggleSidebar')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.add('open');
+    document.getElementById('btnToggleSidebar')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('sidebar')?.classList.toggle('open');
     });
-    document.getElementById('btnCloseSidebar')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.remove('open');
+
+    // Fecha sidebar mobile ao clicar fora dela
+    document.addEventListener('click', (e) => {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('btnToggleSidebar');
+      if (sidebar && sidebar.classList.contains('open')) {
+        if (!sidebar.contains(e.target) && !toggleBtn?.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      }
     });
 
     // 5. Fechamento de Modais pelos botões [data-close-modal]
