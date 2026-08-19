@@ -67,6 +67,3 @@ git commit -m "refactor(#22): modulariza renderizacao da tabela de transacoes"
   - Funções de exportação (`JSON` completo e `CSV`) e importação (`JSON`).
 
 ---
-
-## 🤖 Agentes de IA
-Se você estiver executando como um **Agente de IA** (Gemini, Claude, GPT, etc.), leia atentamente o arquivo [`AGENTS.md`](./AGENTS.md), que contém as regras de governança estritas para agentes.

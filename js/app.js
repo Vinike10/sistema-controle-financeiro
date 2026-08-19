@@ -4,13 +4,6 @@
  * modais, validação de e-mail, skeletons de transição e carregamento progressivo.
  */
 
-import { Storage } from './storage.js';
-import { Auth } from './auth.js';
-import { Transactions } from './transactions.js';
-import { Accounts } from './accounts.js';
-import { Budgets, Goals } from './budgets.js';
-import { UI } from './ui.js';
-
 class App {
   constructor() {
     const today = new Date();
@@ -28,40 +21,80 @@ class App {
       accountId: 'all',
       status: 'all'
     };
+
+    this.parsedImportData = null;
+    this.parsedCloudRestorePayload = null;
   }
 
   async init() {
-    // 1. Inicializa o serviço de autenticação
-    await Auth.initAuth();
+    // 0. Configura interceptores globais de erros síncronos e assíncronos
+    this.setupGlobalErrorHandlers();
 
-    // 2. Configura Tema Claro / Escuro
-    this.setupTheme();
+    try {
+      // 1. Inicializa o serviço de autenticação
+      await Auth.initAuth();
 
-    // 3. Configura Event Listeners da Autenticação e do Sistema
-    this.setupAuthEventListeners();
-    this.setupEventListeners();
+      // 2. Configura Tema Claro / Escuro
+      this.setupTheme();
 
-    // 4. Verifica se o usuário já possui sessão ativa
-    const currentUser = Auth.getCurrentUser();
-    if (currentUser) {
-      this.onUserAuthenticated(currentUser);
-    } else {
-      // Exibe tela de autenticação
-      UI.showAuthModal('login');
+      // 3. Configura Event Listeners da Autenticação e do Sistema
+      this.setupAuthEventListeners();
+      this.setupEventListeners();
+
+      // 4. Verifica se o usuário já possui sessão ativa
+      const currentUser = Auth.getCurrentUser();
+      if (currentUser) {
+        this.onUserAuthenticated(currentUser);
+      } else {
+        // Exibe tela de autenticação
+        UI.showAuthModal('login');
+      }
+    } catch (err) {
+      console.error('Erro na inicialização do sistema:', err);
+      // Fallback: garante que a UI e período sejam exibidos mesmo em caso de erro isolado
+      this.updatePeriodDisplay();
+      UI.refreshIcons();
     }
 
     UI.refreshIcons();
   }
 
+  // Interceptores globais para capturar exceções não tratadas sem travar a aplicação
+  setupGlobalErrorHandlers() {
+    window.addEventListener('error', (event) => {
+      console.error('[App Global Error]:', event.error || event.message);
+      // Ignora ruídos de extensões externas do navegador
+      if (event.filename && !event.filename.includes(window.location.host) && !event.filename.includes('localhost') && !event.filename.includes('127.0.0.1')) {
+        return;
+      }
+      if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Instabilidade pontual detectada. A interface foi mantida segura.', 'warning');
+      }
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.warn('[App Unhandled Rejection]:', event.reason);
+      const reasonMsg = (event.reason && event.reason.message) ? event.reason.message : 'Operação assíncrona não concluída';
+      if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast(`Aviso: ${reasonMsg}`, 'warning');
+      }
+    });
+  }
+
   // Executado quando um usuário é autenticado com sucesso (Login, Cadastro ou Demo)
   onUserAuthenticated(user) {
-    UI.hideAuthModal();
-    Storage.init();
-    UI.updateUserProfileUI(user);
-    this.updatePeriodDisplay();
-    UI.populateSelects();
-    this.renderCurrentView();
-    UI.refreshIcons();
+    try {
+      UI.hideAuthModal();
+      Storage.init();
+      UI.updateUserProfileUI(user);
+      this.updatePeriodDisplay();
+      UI.populateSelects();
+      this.renderCurrentView();
+    } catch (err) {
+      console.error('Erro ao renderizar usuário autenticado:', err);
+    } finally {
+      UI.refreshIcons();
+    }
   }
 
   // Atualiza o texto do seletor de mês e ano no topo
@@ -126,6 +159,7 @@ class App {
           UI.renderReports(this.currentYear, this.currentMonth);
           break;
         case 'settings':
+          // Configurações e Backup
           break;
       }
     };
@@ -160,7 +194,7 @@ class App {
       accounts: { title: 'Contas & Cartões', sub: 'Gerenciamento de bancos, cartões de crédito e carteiras' },
       budgets: { title: 'Orçamentos & Metas', sub: 'Acompanhamento de tetos de gastos e objetivos' },
       reports: { title: 'Relatórios & Analytics', sub: 'Análise detalhada de evolução financeira' },
-      settings: { title: 'Configurações & Backup', sub: 'Exportação, importação e governança do projeto' }
+      settings: { title: 'Configurações & Backup', sub: 'Exportação, importação e gerenciamento da base de dados' }
     };
 
     if (titles[tabName]) {
@@ -195,8 +229,12 @@ class App {
     const icon = document.getElementById('themeIcon');
     if (icon) {
       icon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
-      UI.refreshIcons();
     }
+    const authIcon = document.getElementById('authThemeIcon');
+    if (authIcon) {
+      authIcon.setAttribute('data-lucide', theme === 'dark' ? 'sun' : 'moon');
+    }
+    UI.refreshIcons();
   }
 
   // Modais com animações suaves de abertura e fechamento
@@ -222,6 +260,11 @@ class App {
   // EVENT LISTENERS DE AUTENTICAÇÃO, SEGURANÇA E VALIDAÇÃO DE E-MAIL
   // ==========================================================================
   setupAuthEventListeners() {
+    // 0. Alternador de Modo Escuro / Claro no card de Autenticação
+    document.getElementById('btnAuthThemeToggle')?.addEventListener('click', () => {
+      this.toggleTheme();
+    });
+
     // 1. Alternador de Visibilidade de Senhas (Olho)
     document.getElementById('btnToggleLoginPassword')?.addEventListener('click', () => {
       UI.togglePasswordVisibility('loginPassword', 'iconLoginPassword');
@@ -351,12 +394,11 @@ class App {
           // Redireciona para tela de confirmação de código de 6 dígitos
           UI.switchAuthTab('verify');
           document.getElementById('verifyTargetEmail').textContent = result.user.email;
-          document.getElementById('demoCodeValue').textContent = result.verificationCode;
           
           this.startResendCooldownTimer('resendCountdown', 'btnResendCode');
           this.setup6DigitCodeAutoAdvance('');
 
-          UI.showToast(`Código de confirmação: ${result.verificationCode}`, 'info');
+          UI.showToast('📨 Enviamos um código de 6 dígitos para seu e-mail! Verifique sua caixa de entrada.', 'info');
         } else {
           UI.setAuthAlert('regAlert', result.error, 'danger');
         }
@@ -373,29 +415,6 @@ class App {
     this.setup6DigitCodeAutoAdvance('');
     this.setup6DigitCodeAutoAdvance('std');
 
-    // Botão de auto-preenchimento para demonstração
-    document.getElementById('btnAutoFillCode')?.addEventListener('click', () => {
-      const code = document.getElementById('demoCodeValue').textContent;
-      if (code && code !== '------') {
-        for (let i = 1; i <= 6; i++) {
-          const d = document.getElementById(`digit${i}`);
-          if (d) d.value = code[i - 1] || '';
-        }
-        document.getElementById('digit6')?.focus();
-      }
-    });
-
-    document.getElementById('btnStdAutoFillCode')?.addEventListener('click', () => {
-      const code = document.getElementById('stdDemoCodeValue').textContent;
-      if (code && code !== '------') {
-        for (let i = 1; i <= 6; i++) {
-          const d = document.getElementById(`stdDigit${i}`);
-          if (d) d.value = code[i - 1] || '';
-        }
-        document.getElementById('stdDigit6')?.focus();
-      }
-    });
-
     // Submit da Validação de E-mail (Tela inicial pós cadastro)
     document.getElementById('formVerifyEmail')?.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -405,6 +424,11 @@ class App {
       let code = '';
       for (let i = 1; i <= 6; i++) {
         code += document.getElementById(`digit${i}`)?.value || '';
+      }
+
+      if (code.length !== 6) {
+        UI.setAuthAlert('verifyAlert', 'Por favor, insira todos os 6 dígitos do código recebido no e-mail.', 'warning');
+        return;
       }
 
       const result = Auth.verifyEmail(user.id, code);
@@ -433,9 +457,8 @@ class App {
 
       const res = Auth.resendVerificationCode(user.id);
       if (res.success) {
-        document.getElementById('demoCodeValue').textContent = res.code;
         this.startResendCooldownTimer('resendCountdown', 'btnResendCode');
-        UI.showToast(res.message, 'info');
+        UI.showToast('📨 Um novo código de verificação foi enviado para seu e-mail!', 'info');
       }
     });
 
@@ -448,6 +471,11 @@ class App {
       let code = '';
       for (let i = 1; i <= 6; i++) {
         code += document.getElementById(`stdDigit${i}`)?.value || '';
+      }
+
+      if (code.length !== 6) {
+        UI.setAuthAlert('stdVerifyAlert', 'Por favor, insira os 6 dígitos recebidos no e-mail.', 'warning');
+        return;
       }
 
       const result = Auth.verifyEmail(user.id, code);
@@ -467,9 +495,8 @@ class App {
 
       const res = Auth.resendVerificationCode(user.id);
       if (res.success) {
-        document.getElementById('stdDemoCodeValue').textContent = res.code;
         this.startResendCooldownTimer('stdResendCountdown', 'btnStdResendCode');
-        UI.showToast(res.message, 'info');
+        UI.showToast('📨 Novo código de verificação enviado para seu e-mail!', 'info');
       }
     });
 
@@ -481,8 +508,8 @@ class App {
         UI.clearAuthAlert('recoverAlert');
         document.getElementById('recoverStep1').style.display = 'none';
         document.getElementById('recoverStep2').style.display = 'block';
-        document.getElementById('recoverCode').value = res.code; // Preenche código na simulação
-        UI.showToast(`Código de recuperação: ${res.code}`, 'info');
+        document.getElementById('recoverCode').value = '';
+        UI.showToast('📨 Código de recuperação enviado para seu e-mail!', 'info');
       } else {
         UI.setAuthAlert('recoverAlert', res.error, 'danger');
       }
@@ -695,6 +722,11 @@ class App {
       });
     });
 
+    // Botão de Início no topo da Sidebar (Brand Logo)
+    document.getElementById('btnBrandHome')?.addEventListener('click', () => {
+      this.switchTab('dashboard');
+    });
+
     // Botões de atalho no Dashboard
     document.getElementById('btnGoToTransactions')?.addEventListener('click', () => this.switchTab('transactions'));
     document.getElementById('btnGoToBudgets')?.addEventListener('click', () => this.switchTab('budgets'));
@@ -724,11 +756,20 @@ class App {
     document.getElementById('btnThemeToggle')?.addEventListener('click', () => this.toggleTheme());
 
     // 4. Sidebar Mobile
-    document.getElementById('btnToggleSidebar')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.add('open');
+    document.getElementById('btnToggleSidebar')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('sidebar')?.classList.toggle('open');
     });
-    document.getElementById('btnCloseSidebar')?.addEventListener('click', () => {
-      document.getElementById('sidebar')?.classList.remove('open');
+
+    // Fecha sidebar mobile ao clicar fora dela
+    document.addEventListener('click', (e) => {
+      const sidebar = document.getElementById('sidebar');
+      const toggleBtn = document.getElementById('btnToggleSidebar');
+      if (sidebar && sidebar.classList.contains('open')) {
+        if (!sidebar.contains(e.target) && !toggleBtn?.contains(e.target)) {
+          sidebar.classList.remove('open');
+        }
+      }
     });
 
     // 5. Fechamento de Modais pelos botões [data-close-modal]
@@ -774,37 +815,51 @@ class App {
 
     document.getElementById('formTransaction')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('txId').value;
-      const type = document.getElementById('txType').value;
-      const description = document.getElementById('txDescription').value.trim();
-      const amount = parseFloat(document.getElementById('txAmount').value);
-      const categoryId = document.getElementById('txCategory').value;
-      const accountId = document.getElementById('txAccount').value;
-      const date = document.getElementById('txDate').value;
-      const status = document.getElementById('txStatus').value;
-      const notes = document.getElementById('txNotes').value.trim();
-      const installments = parseInt(document.getElementById('txInstallments').value, 10) || 1;
+      try {
+        const id = document.getElementById('txId').value;
+        const type = document.getElementById('txType').value;
+        const description = document.getElementById('txDescription').value.trim();
+        const amount = Transactions.parseAmount(document.getElementById('txAmount').value);
+        const categoryId = document.getElementById('txCategory').value;
+        const accountId = document.getElementById('txAccount').value;
+        const date = document.getElementById('txDate').value;
+        const status = document.getElementById('txStatus').value;
+        const notes = document.getElementById('txNotes').value.trim();
+        const installments = parseInt(document.getElementById('txInstallments').value, 10) || 1;
 
-      if (!description || isNaN(amount) || amount <= 0 || !date) {
-        UI.showToast('Preencha os campos obrigatórios corretamente.', 'error');
-        return;
-      }
-
-      if (id) {
-        Transactions.update(id, { description, amount, type, categoryId, accountId, date, status, notes });
-        UI.showToast('Transação atualizada com sucesso!', 'success');
-      } else {
-        if (installments > 1 && type === 'expense') {
-          Transactions.createInstallments({ description, amount, categoryId, accountId, date, status, notes, installments });
-          UI.showToast(`Transação criada em ${installments} parcelas com sucesso!`, 'success');
-        } else {
-          Transactions.create({ description, amount, type, categoryId, accountId, date, status, notes });
-          UI.showToast('Transação registrada com sucesso!', 'success');
+        if (!description) {
+          UI.showToast('Informe a descrição da transação.', 'error');
+          return;
         }
-      }
 
-      this.closeModal('modalTransaction');
-      this.renderCurrentView(false);
+        if (amount <= 0) {
+          UI.showToast('Informe um valor monetário válido maior que zero.', 'error');
+          return;
+        }
+
+        if (!date) {
+          UI.showToast('Informe a data da transação.', 'error');
+          return;
+        }
+
+        if (id) {
+          Transactions.update(id, { description, amount, type, categoryId, accountId, date, status, notes });
+          UI.showToast('Transação atualizada com sucesso!', 'success');
+        } else {
+          if (installments > 1 && type === 'expense') {
+            Transactions.createInstallments({ description, amount, categoryId, accountId, date, status, notes, installments });
+            UI.showToast(`Transação criada em ${installments} parcelas com sucesso!`, 'success');
+          } else {
+            Transactions.create({ description, amount, type, categoryId, accountId, date, status, notes });
+            UI.showToast('Transação registrada com sucesso!', 'success');
+          }
+        }
+
+        this.closeModal('modalTransaction');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar transação: ${err.message}`, 'error');
+      }
     });
 
     // ==================== MODAL DE TRANSFERÊNCIA ====================
@@ -821,29 +876,33 @@ class App {
 
     document.getElementById('formTransfer')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const fromAccountId = document.getElementById('transferFrom').value;
-      const toAccountId = document.getElementById('transferTo').value;
-      const amount = parseFloat(document.getElementById('transferAmount').value);
-      const date = document.getElementById('transferDate').value;
-      const notes = document.getElementById('transferNotes').value.trim();
+      try {
+        const fromAccountId = document.getElementById('transferFrom').value;
+        const toAccountId = document.getElementById('transferTo').value;
+        const amount = Accounts.parseAmount(document.getElementById('transferAmount').value);
+        const date = document.getElementById('transferDate').value;
+        const notes = document.getElementById('transferNotes').value.trim();
 
-      if (fromAccountId === toAccountId) {
-        UI.showToast('A conta de origem e destino não podem ser as mesmas.', 'error');
-        return;
-      }
+        if (fromAccountId === toAccountId) {
+          UI.showToast('A conta de origem e destino não podem ser as mesmas.', 'error');
+          return;
+        }
 
-      if (isNaN(amount) || amount <= 0 || !date) {
-        UI.showToast('Informe um valor de transferência válido.', 'error');
-        return;
-      }
+        if (amount <= 0 || !date) {
+          UI.showToast('Informe um valor de transferência válido maior que zero.', 'error');
+          return;
+        }
 
-      const result = Accounts.transfer(fromAccountId, toAccountId, amount, date, notes);
-      if (result.success) {
-        UI.showToast(result.message, 'success');
-        this.closeModal('modalTransfer');
-        this.renderCurrentView(false);
-      } else {
-        UI.showToast(result.message, 'error');
+        const result = Accounts.transfer(fromAccountId, toAccountId, amount, date, notes);
+        if (result.success) {
+          UI.showToast(result.message, 'success');
+          this.closeModal('modalTransfer');
+          this.renderCurrentView(false);
+        } else {
+          UI.showToast(result.message, 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro na transferência: ${err.message}`, 'error');
       }
     });
 
@@ -852,6 +911,7 @@ class App {
       document.getElementById('formAccount').reset();
       document.getElementById('accId').value = '';
       document.getElementById('modalAccountTitle').textContent = 'Nova Conta / Cartão';
+      document.getElementById('accType').value = 'checking';
       document.getElementById('accColor').value = '#3b82f6';
       document.getElementById('cardDetailsRow').style.display = 'none';
       document.getElementById('accInitialBalance').parentElement.style.display = 'block';
@@ -866,30 +926,35 @@ class App {
 
     document.getElementById('formAccount')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('accId').value;
-      const name = document.getElementById('accName').value.trim();
-      const type = document.getElementById('accType').value;
-      const initialBalance = parseFloat(document.getElementById('accInitialBalance').value) || 0;
-      const color = document.getElementById('accColor').value;
-      const closingDay = parseInt(document.getElementById('accClosingDay').value, 10) || null;
-      const dueDay = parseInt(document.getElementById('accDueDay').value, 10) || null;
+      try {
+        const id = document.getElementById('accId').value;
+        const name = document.getElementById('accName').value.trim();
+        const type = document.getElementById('accType').value;
+        const initialBalance = Accounts.parseAmount(document.getElementById('accInitialBalance').value);
+        const color = document.getElementById('accColor').value;
+        const limit = Accounts.parseAmount(document.getElementById('accLimit')?.value);
+        const closingDay = parseInt(document.getElementById('accClosingDay').value, 10) || null;
+        const dueDay = parseInt(document.getElementById('accDueDay').value, 10) || null;
 
-      if (!name) {
-        UI.showToast('Informe o nome da conta.', 'error');
-        return;
+        if (!name) {
+          UI.showToast('Informe o nome da conta.', 'error');
+          return;
+        }
+
+        if (id) {
+          Accounts.update(id, { name, type, initialBalance, color, limit, closingDay, dueDay });
+          UI.showToast('Conta atualizada com sucesso!', 'success');
+        } else {
+          Accounts.create({ name, type, initialBalance, color, limit, closingDay, dueDay });
+          UI.showToast('Conta criada com sucesso!', 'success');
+        }
+
+        UI.populateSelects();
+        this.closeModal('modalAccount');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar conta: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Accounts.update(id, { name, type, initialBalance, color, closingDay, dueDay });
-        UI.showToast('Conta atualizada com sucesso!', 'success');
-      } else {
-        Accounts.create({ name, type, initialBalance, color, closingDay, dueDay });
-        UI.showToast('Conta criada com sucesso!', 'success');
-      }
-
-      UI.populateSelects();
-      this.closeModal('modalAccount');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE ORÇAMENTO ====================
@@ -903,25 +968,29 @@ class App {
 
     document.getElementById('formBudget')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('budgetId').value;
-      const categoryId = document.getElementById('budgetCategory').value;
-      const monthlyLimit = parseFloat(document.getElementById('budgetLimit').value);
+      try {
+        const id = document.getElementById('budgetId').value;
+        const categoryId = document.getElementById('budgetCategory').value;
+        const monthlyLimit = parseFloat(document.getElementById('budgetLimit').value);
 
-      if (!categoryId || isNaN(monthlyLimit) || monthlyLimit <= 0) {
-        UI.showToast('Preencha os campos do orçamento corretamente.', 'error');
-        return;
+        if (!categoryId || isNaN(monthlyLimit) || monthlyLimit <= 0) {
+          UI.showToast('Preencha os campos do orçamento corretamente com um limite maior que zero.', 'error');
+          return;
+        }
+
+        if (id) {
+          Budgets.update(id, { categoryId, monthlyLimit });
+          UI.showToast('Orçamento atualizado!', 'success');
+        } else {
+          Budgets.create({ categoryId, monthlyLimit });
+          UI.showToast('Orçamento definido com sucesso!', 'success');
+        }
+
+        this.closeModal('modalBudget');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar orçamento: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Budgets.update(id, { categoryId, monthlyLimit });
-        UI.showToast('Orçamento atualizado!', 'success');
-      } else {
-        Budgets.create({ categoryId, monthlyLimit });
-        UI.showToast('Orçamento definido com sucesso!', 'success');
-      }
-
-      this.closeModal('modalBudget');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE META ====================
@@ -935,52 +1004,62 @@ class App {
 
     document.getElementById('formGoal')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('goalId').value;
-      const title = document.getElementById('goalTitle').value.trim();
-      const targetAmount = parseFloat(document.getElementById('goalTargetAmount').value);
-      const currentAmount = parseFloat(document.getElementById('goalCurrentAmount').value) || 0;
-      const deadline = document.getElementById('goalDeadline').value;
-      const color = document.getElementById('goalColor').value;
+      try {
+        const id = document.getElementById('goalId').value;
+        const title = document.getElementById('goalTitle').value.trim();
+        const targetAmount = parseFloat(document.getElementById('goalTargetAmount').value);
+        const currentAmount = parseFloat(document.getElementById('goalCurrentAmount').value) || 0;
+        const deadline = document.getElementById('goalDeadline').value;
+        const color = document.getElementById('goalColor').value;
 
-      if (!title || isNaN(targetAmount) || targetAmount <= 0) {
-        UI.showToast('Preencha os dados da meta corretamente.', 'error');
-        return;
+        if (!title || isNaN(targetAmount) || targetAmount <= 0) {
+          UI.showToast('Preencha os dados da meta corretamente com um valor alvo maior que zero.', 'error');
+          return;
+        }
+
+        if (id) {
+          Goals.update(id, { title, targetAmount, currentAmount, deadline, color });
+          UI.showToast('Meta atualizada!', 'success');
+        } else {
+          Goals.create({ title, targetAmount, currentAmount, deadline, color });
+          UI.showToast('Meta criada com sucesso!', 'success');
+        }
+
+        this.closeModal('modalGoal');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar meta: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Goals.update(id, { title, targetAmount, currentAmount, deadline, color });
-        UI.showToast('Meta atualizada!', 'success');
-      } else {
-        Goals.create({ title, targetAmount, currentAmount, deadline, color });
-        UI.showToast('Meta criada com sucesso!', 'success');
-      }
-
-      this.closeModal('modalGoal');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE APORTE EM META ====================
     document.getElementById('formGoalDeposit')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const goalId = document.getElementById('depositGoalId').value;
-      const amount = parseFloat(document.getElementById('depositAmount').value);
+      try {
+        const goalId = document.getElementById('depositGoalId').value;
+        const amount = typeof parseNumericValue === 'function' 
+          ? parseNumericValue(document.getElementById('depositAmount').value)
+          : parseFloat(document.getElementById('depositAmount').value);
 
-      if (isNaN(amount) || amount <= 0) {
-        UI.showToast('Informe um valor de aporte válido.', 'error');
-        return;
-      }
+        if (isNaN(amount) || amount <= 0) {
+          UI.showToast('Informe um valor de aporte válido maior que zero.', 'error');
+          return;
+        }
 
-      const res = Goals.deposit(goalId, amount);
-      if (res.success) {
-        UI.showToast(res.message, 'success');
-        this.closeModal('modalGoalDeposit');
-        this.renderCurrentView(false);
-      } else {
-        UI.showToast(res.message, 'error');
+        const res = Goals.deposit(goalId, amount);
+        if (res.success) {
+          UI.showToast(res.message, 'success');
+          this.closeModal('modalGoalDeposit');
+          this.renderCurrentView(false);
+        } else {
+          UI.showToast(res.message, 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro ao registrar aporte: ${err.message}`, 'error');
       }
     });
 
-    // ==================== DELEGAÇÃO DE EVENTOS PARA AÇÕES NA TABELA ====================
+    // ==================== DELEGAÇÃO DE EVENTOS PARA AÇÕES NA INTERFACE ====================
     document.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-action]');
       if (!btn) return;
@@ -988,11 +1067,11 @@ class App {
       const action = btn.dataset.action;
       const id = btn.dataset.id;
 
-      // Alternar status pago/pendente com 1 clique
-      if (action === 'toggle-tx-status') {
+      // Alternar status pago/pendente com 1 clique (tabela e dashboard)
+      if (action === 'toggle-tx-status' || action === 'toggle-status') {
         const tx = Transactions.toggleStatus(id);
         if (tx) {
-          UI.showToast(`Transação marcada como ${tx.status === 'paid' ? 'Paga' : 'Pendente'}.`, 'success');
+          UI.showToast(`Transação marcada como ${tx === 'paid' ? 'Paga' : 'Pendente'}.`, 'success');
           this.renderCurrentView(false);
         }
       }
@@ -1025,6 +1104,35 @@ class App {
         }
       }
 
+      // Editar Conta / Cartão
+      if (action === 'edit-account') {
+        const acc = Accounts.getById(id);
+        if (acc) {
+          document.getElementById('accId').value = acc.id;
+          document.getElementById('accName').value = acc.name;
+          document.getElementById('accType').value = acc.type;
+          document.getElementById('accInitialBalance').value = acc.initialBalance || 0;
+          document.getElementById('accColor').value = acc.color || '#3b82f6';
+          
+          const isCard = acc.type === 'credit';
+          document.getElementById('cardDetailsRow').style.display = isCard ? 'flex' : 'none';
+          document.getElementById('accInitialBalance').parentElement.style.display = isCard ? 'none' : 'block';
+          
+          if (isCard) {
+            document.getElementById('accLimit').value = acc.limit || '';
+            document.getElementById('accClosingDay').value = acc.closingDay || '';
+            document.getElementById('accDueDay').value = acc.dueDay || '';
+          } else {
+            document.getElementById('accLimit').value = '';
+            document.getElementById('accClosingDay').value = '';
+            document.getElementById('accDueDay').value = '';
+          }
+
+          document.getElementById('modalAccountTitle').textContent = 'Editar Conta / Cartão';
+          this.openModal('modalAccount');
+        }
+      }
+
       // Excluir Conta
       if (action === 'delete-account') {
         if (confirm('Deseja realmente excluir esta conta?')) {
@@ -1035,12 +1143,40 @@ class App {
         }
       }
 
+      // Editar Orçamento
+      if (action === 'edit-budget') {
+        const budget = Budgets.getById(id);
+        if (budget) {
+          document.getElementById('budgetId').value = budget.id;
+          document.getElementById('budgetCategory').value = budget.categoryId;
+          document.getElementById('budgetLimit').value = budget.monthlyLimit;
+          document.getElementById('modalBudgetTitle').textContent = 'Editar Orçamento de Categoria';
+          UI.populateSelects();
+          this.openModal('modalBudget');
+        }
+      }
+
       // Excluir Orçamento
       if (action === 'delete-budget') {
         if (confirm('Deseja excluir este orçamento de categoria?')) {
           Budgets.delete(id);
           UI.showToast('Orçamento excluído.', 'info');
           this.renderCurrentView(false);
+        }
+      }
+
+      // Editar Meta
+      if (action === 'edit-goal') {
+        const goal = Goals.getById(id);
+        if (goal) {
+          document.getElementById('goalId').value = goal.id;
+          document.getElementById('goalTitle').value = goal.title;
+          document.getElementById('goalTargetAmount').value = goal.targetAmount;
+          document.getElementById('goalCurrentAmount').value = goal.currentAmount || 0;
+          document.getElementById('goalDeadline').value = goal.deadline || '';
+          document.getElementById('goalColor').value = goal.color || '#10b981';
+          document.getElementById('modalGoalTitle').textContent = 'Editar Meta de Economia';
+          this.openModal('modalGoal');
         }
       }
 
@@ -1156,6 +1292,400 @@ class App {
         UI.showToast('Todos os dados da conta foram resetados.', 'info');
       }
     });
+
+    // ==================== CENTRAL DE BACKUP & NUVEM PESSOAL ====================
+    const openCloudBackupModal = () => {
+      const user = Auth.getCurrentUser();
+      const emailEl = document.getElementById('cloudBackupTargetEmail');
+      if (emailEl) emailEl.textContent = user?.email || 'seu.email@exemplo.com';
+
+      const lastDate = Storage.getLastBackupDate();
+      const lastDateEl = document.getElementById('cloudBackupLastDateText');
+      const badgeEl = document.getElementById('cloudBackupStatusBadge');
+
+      if (lastDate) {
+        const d = new Date(lastDate);
+        if (lastDateEl) lastDateEl.textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        if (badgeEl) {
+          badgeEl.className = 'badge-status-inline verified';
+          badgeEl.textContent = '✓ Protegido';
+        }
+      } else {
+        if (lastDateEl) lastDateEl.textContent = 'Nenhum backup recente registrado neste dispositivo.';
+        if (badgeEl) {
+          badgeEl.className = 'badge-status-inline warning';
+          badgeEl.textContent = 'Pendente';
+        }
+      }
+
+      this.switchBackupTab('export');
+      this.resetCloudRestoreState();
+      this.openModal('modalCloudBackup');
+      UI.refreshIcons();
+    };
+
+    document.getElementById('btnOpenCloudBackupModal')?.addEventListener('click', openCloudBackupModal);
+    document.getElementById('btnDropdownCloudBackup')?.addEventListener('click', () => {
+      document.getElementById('userMenuContainer')?.classList.remove('open');
+      openCloudBackupModal();
+    });
+
+    // Alternar abas dentro do modal de Backup (Exportar vs Restaurar)
+    document.querySelectorAll('[data-backup-tab]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.switchBackupTab(btn.dataset.backupTab);
+      });
+    });
+
+    // 1. Ação: Enviar Backup por E-mail (Outlook / Hotmail)
+    document.getElementById('btnCloudSendEmail')?.addEventListener('click', async () => {
+      const btn = document.getElementById('btnCloudSendEmail');
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>Gerando relatório e enviando...</span>';
+
+      try {
+        const result = await Storage.sendBackupByEmail();
+        if (result.success) {
+          UI.showToast(result.message, 'success');
+          // Atualiza status na tela
+          const lastDate = Storage.getLastBackupDate();
+          const d = new Date(lastDate);
+          document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+          document.getElementById('cloudBackupStatusBadge').className = 'badge-status-inline verified';
+          document.getElementById('cloudBackupStatusBadge').textContent = '✓ Protegido';
+        } else {
+          UI.showToast(result.error || 'Erro ao enviar por e-mail.', 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        UI.refreshIcons();
+      }
+    });
+
+    // 2. Ação: Salvar no Google Drive / Compartilhar
+    document.getElementById('btnCloudShareDrive')?.addEventListener('click', async () => {
+      const result = await Storage.shareBackupViaWebShare();
+      if (result.success) {
+        UI.showToast(result.message, 'success');
+        const lastDate = Storage.getLastBackupDate();
+        if (lastDate) {
+          const d = new Date(lastDate);
+          document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      } else if (!result.aborted) {
+        UI.showToast('Não foi possível compartilhar.', 'warning');
+      }
+    });
+
+    // 3. Ação: Baixar JSON
+    document.getElementById('btnCloudDownloadJSON')?.addEventListener('click', () => {
+      Storage.exportBackupJSON();
+      UI.showToast('💾 Cópia de segurança (.JSON) baixada com sucesso!', 'success');
+      const lastDate = Storage.getLastBackupDate();
+      if (lastDate) {
+        const d = new Date(lastDate);
+        document.getElementById('cloudBackupLastDateText').textContent = `Salvo em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+      }
+    });
+
+    // 4. Ação: Exportar CSV
+    document.getElementById('btnCloudExportCSV')?.addEventListener('click', () => {
+      Storage.exportTransactionsCSV();
+      UI.showToast('📊 Extrato (.CSV) baixado! Pronto para abrir no Excel.', 'success');
+    });
+
+    // 5. Restauração: Selecionar e Arrastar arquivo .JSON
+    document.getElementById('btnSelectCloudRestoreFile')?.addEventListener('click', () => {
+      document.getElementById('inputCloudRestoreFile').click();
+    });
+
+    const restoreDropzone = document.getElementById('cloudRestoreDropzone');
+    if (restoreDropzone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        restoreDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          restoreDropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        restoreDropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          restoreDropzone.classList.remove('dragover');
+        });
+      });
+
+      restoreDropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          this.handleCloudRestoreFile(files[0]);
+        }
+      });
+    }
+
+    document.getElementById('inputCloudRestoreFile')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.handleCloudRestoreFile(file);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btnCancelCloudRestore')?.addEventListener('click', () => {
+      this.resetCloudRestoreState();
+    });
+
+    document.getElementById('btnExecuteCloudRestore')?.addEventListener('click', () => {
+      if (!this.parsedCloudRestorePayload) {
+        UI.showToast('Nenhum dado de backup pronto para restauração.', 'warning');
+        return;
+      }
+
+      const mode = document.querySelector('input[name="cloudRestoreMode"]:checked')?.value || 'replace';
+      const result = Storage.importBackupJSON(this.parsedCloudRestorePayload, mode);
+
+      if (result.success) {
+        this.closeModal('modalCloudBackup');
+        UI.showToast(result.message, 'success');
+        UI.populateSelects();
+        this.renderCurrentView(true);
+      } else {
+        UI.showToast(result.message, 'error');
+      }
+    });
+
+    // ==================== MODAL DE IMPORTAÇÃO DE PLANILHAS E JSON ====================
+    const openImportModal = () => {
+      const accounts = Storage.getAccounts();
+      const select = document.getElementById('importTargetAccount');
+      if (select) {
+        select.innerHTML = accounts.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+      }
+      this.resetImportModal();
+      this.openModal('modalImportData');
+      UI.refreshIcons();
+    };
+
+    document.getElementById('btnOpenImportModal')?.addEventListener('click', openImportModal);
+    document.getElementById('btnTxOpenImportModal')?.addEventListener('click', openImportModal);
+
+    document.getElementById('btnDownloadModelCSV')?.addEventListener('click', () => {
+      Storage.downloadModelCSV();
+      UI.showToast('📄 Planilha modelo (.CSV) baixada! Abra no Excel para preencher.', 'success');
+    });
+
+    document.getElementById('btnSelectImportFile')?.addEventListener('click', () => {
+      document.getElementById('inputImportFile').click();
+    });
+
+    const dropzone = document.getElementById('importDropzone');
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.add('dragover');
+        });
+      });
+
+      ['dragleave', 'drop'].forEach(name => {
+        dropzone.addEventListener(name, (e) => {
+          e.preventDefault();
+          dropzone.classList.remove('dragover');
+        });
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          this.handleImportFile(files[0]);
+        }
+      });
+    }
+
+    document.getElementById('inputImportFile')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        this.handleImportFile(file);
+      }
+      e.target.value = '';
+    });
+
+    document.getElementById('btnRemoveSelectedFile')?.addEventListener('click', () => {
+      this.resetImportModal();
+    });
+
+    document.getElementById('importTargetAccount')?.addEventListener('change', () => {
+      if (this.currentRawImportText) {
+        const accId = document.getElementById('importTargetAccount').value;
+        const res = Storage.parseCSVTransactions(this.currentRawImportText, accId);
+        if (res.success) {
+          this.parsedImportData = res.transactions;
+          this.renderImportPreview(res);
+        }
+      }
+    });
+
+    document.getElementById('btnExecuteImport')?.addEventListener('click', () => {
+      if (!this.parsedImportData || this.parsedImportData.length === 0) {
+        UI.showToast('Nenhuma transação selecionada para importação.', 'warning');
+        return;
+      }
+
+      const mode = document.querySelector('input[name="importMode"]:checked')?.value || 'merge';
+      const result = Storage.importTransactions(this.parsedImportData, mode);
+
+      if (result.success) {
+        this.closeModal('modalImportData');
+        UI.showToast(result.message, 'success');
+        UI.populateSelects();
+        this.renderCurrentView(true);
+      } else {
+        UI.showToast(result.message, 'error');
+      }
+    });
+  }
+
+  // Reseta estado do modal de importação
+  resetImportModal() {
+    this.parsedImportData = null;
+    this.currentRawImportText = null;
+
+    document.getElementById('selectedFileBanner').style.display = 'none';
+    document.getElementById('importConfigGrid').style.display = 'none';
+    document.getElementById('importPreviewBox').style.display = 'none';
+    document.getElementById('importAlert').style.display = 'none';
+
+    const btnExec = document.getElementById('btnExecuteImport');
+    if (btnExec) {
+      btnExec.disabled = true;
+      document.getElementById('btnExecuteImportText').textContent = 'Importar Dados';
+    }
+  }
+
+  // Processa arquivo selecionado (CSV ou JSON)
+  handleImportFile(file) {
+    if (!file) return;
+
+    const fileName = file.name;
+    const isJSON = fileName.endsWith('.json');
+    const isCSV = fileName.endsWith('.csv') || fileName.endsWith('.txt');
+
+    if (!isJSON && !isCSV) {
+      UI.showToast('Por favor, selecione um arquivo válido (.CSV ou .JSON).', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      this.currentRawImportText = content;
+
+      document.getElementById('importFileName').textContent = fileName;
+      document.getElementById('importFileSize').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+      document.getElementById('selectedFileBanner').style.display = 'flex';
+      document.getElementById('importConfigGrid').style.display = 'grid';
+
+      if (isJSON) {
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed.transactions && Array.isArray(parsed.transactions)) {
+            this.parsedImportData = parsed.transactions;
+            const summary = {
+              totalIncome: parsed.transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+              totalExpense: parsed.transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0),
+              countIncome: parsed.transactions.filter(t => t.type === 'income').length,
+              countExpense: parsed.transactions.filter(t => t.type === 'expense').length
+            };
+            this.renderImportPreview({ transactions: parsed.transactions, totalCount: parsed.transactions.length, summary });
+          } else {
+            UI.showToast('Arquivo JSON de backup lido. Você pode restaurar em Configurações.', 'info');
+          }
+        } catch {
+          UI.showToast('Erro ao ler arquivo JSON.', 'error');
+        }
+      } else {
+        // CSV Parsing
+        const targetAccId = document.getElementById('importTargetAccount')?.value;
+        const result = Storage.parseCSVTransactions(content, targetAccId);
+
+        if (result.success) {
+          this.parsedImportData = result.transactions;
+          this.renderImportPreview(result);
+        } else {
+          document.getElementById('importAlert').style.display = 'block';
+          document.getElementById('importAlert').className = 'auth-alert alert-danger';
+          document.getElementById('importAlert').textContent = result.error || 'Não foi possível ler as transações da planilha.';
+        }
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // Renderiza a pré-visualização das transações
+  renderImportPreview(result) {
+    const { transactions, totalCount, summary } = result;
+    const previewBox = document.getElementById('importPreviewBox');
+    const tableBody = document.getElementById('importPreviewTableBody');
+    const badge = document.getElementById('previewTotalBadge');
+
+    if (badge) badge.textContent = `${totalCount} transações detectadas`;
+    if (document.getElementById('prevTotalIncome')) document.getElementById('prevTotalIncome').textContent = UI.formatCurrency(summary.totalIncome);
+    if (document.getElementById('prevCountIncome')) document.getElementById('prevCountIncome').textContent = `${summary.countIncome} receitas`;
+    if (document.getElementById('prevTotalExpense')) document.getElementById('prevTotalExpense').textContent = UI.formatCurrency(summary.totalExpense);
+    if (document.getElementById('prevCountExpense')) document.getElementById('prevCountExpense').textContent = `${summary.countExpense} despesas`;
+    
+    const net = summary.totalIncome - summary.totalExpense;
+    if (document.getElementById('prevNetBalance')) {
+      const el = document.getElementById('prevNetBalance');
+      el.textContent = UI.formatCurrency(net);
+      el.className = net >= 0 ? 'text-success' : 'text-danger';
+    }
+
+    // Renderiza primeiras 5 transações na tabela
+    const categories = Storage.getCategories();
+    const catMap = new Map(categories.map(c => [c.id, c.name]));
+
+    const firstRows = transactions.slice(0, 6);
+    tableBody.innerHTML = firstRows.map(tx => `
+      <tr>
+        <td>${tx.date}</td>
+        <td><strong>${tx.description}</strong></td>
+        <td><span class="badge-status-inline ${tx.type === 'income' ? 'income' : 'expense'}">${tx.type === 'income' ? 'Receita' : 'Despesa'}</span></td>
+        <td>${catMap.get(tx.categoryId) || 'Geral'}</td>
+        <td class="text-right ${tx.type === 'income' ? 'text-success' : 'text-danger'} font-semibold">${tx.type === 'income' ? '+' : '-'} ${UI.formatCurrency(tx.amount)}</td>
+      </tr>
+    `).join('');
+
+    previewBox.style.display = 'block';
+
+    const btnExec = document.getElementById('btnExecuteImport');
+    if (btnExec) {
+      btnExec.disabled = false;
+      document.getElementById('btnExecuteImportText').textContent = `Importar ${totalCount} Transações`;
+    }
+
+    UI.refreshIcons();
+  }
+
+  // Popula campos de configuração do EmailJS
+  populateEmailSettings() {
+    const cfg = Storage.getEmailSettings();
+    const user = Auth.getCurrentUser();
+    const servInput = document.getElementById('cfgEmailServiceId');
+    const tmplInput = document.getElementById('cfgEmailTemplateId');
+    const pubInput = document.getElementById('cfgEmailPublicKey');
+    const testEmailInput = document.getElementById('inputTestEmail');
+
+    if (servInput) servInput.value = cfg.serviceId || '';
+    if (tmplInput) tmplInput.value = cfg.templateId || '';
+    if (pubInput) pubInput.value = cfg.publicKey || '';
+    if (testEmailInput && !testEmailInput.value && user?.email) {
+      testEmailInput.value = user.email;
+    }
   }
 
   // Auxiliar para alternar o tipo no modal de transação
@@ -1173,6 +1703,90 @@ class App {
         <option value="${c.id}">${c.name}</option>
       `).join('');
     }
+  }
+
+  // Alterna entre abas do modal de Backup (Exportar vs Restaurar)
+  switchBackupTab(tabName) {
+    document.querySelectorAll('[data-backup-tab]').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.backupTab === tabName);
+    });
+
+    const paneExport = document.getElementById('paneBackupExport');
+    const paneRestore = document.getElementById('paneBackupRestore');
+
+    if (paneExport && paneRestore) {
+      if (tabName === 'export') {
+        paneExport.style.display = 'block';
+        paneRestore.style.display = 'none';
+      } else {
+        paneExport.style.display = 'none';
+        paneRestore.style.display = 'block';
+      }
+    }
+    UI.refreshIcons();
+  }
+
+  // Reseta o estado da aba de restauração de backup
+  resetCloudRestoreState() {
+    this.parsedCloudRestorePayload = null;
+    const previewBox = document.getElementById('cloudRestorePreviewBox');
+    const alertBox = document.getElementById('cloudRestoreAlert');
+    if (previewBox) previewBox.style.display = 'none';
+    if (alertBox) alertBox.style.display = 'none';
+  }
+
+  // Processa o arquivo JSON de backup selecionado ou arrastado
+  handleCloudRestoreFile(file) {
+    if (!file) return;
+
+    if (!file.name.endsWith('.json')) {
+      UI.showToast('Por favor, selecione um arquivo de backup com extensão .JSON.', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target.result;
+      const inspection = Storage.inspectBackupJSON(content);
+
+      const previewBox = document.getElementById('cloudRestorePreviewBox');
+      const alertBox = document.getElementById('cloudRestoreAlert');
+
+      if (inspection.valid) {
+        this.parsedCloudRestorePayload = inspection.payload;
+
+        if (alertBox) alertBox.style.display = 'none';
+        if (previewBox) previewBox.style.display = 'block';
+
+        const stats = inspection.stats;
+        document.getElementById('cloudRestoreTxCount').textContent = stats.transactionsCount;
+        document.getElementById('cloudRestoreAccCount').textContent = stats.accountsCount;
+        document.getElementById('cloudRestoreGoalsCount').textContent = stats.goalsCount;
+
+        const dateStr = inspection.exportDate && inspection.exportDate !== 'Data não identificada'
+          ? new Date(inspection.exportDate).toLocaleDateString('pt-BR')
+          : 'Data recente';
+        document.getElementById('cloudRestoreDateText').textContent = dateStr;
+
+        const userStr = inspection.user?.name ? `De: ${inspection.user.name}` : 'Backup do Control DIN';
+        document.getElementById('cloudRestoreUserText').textContent = userStr;
+
+        UI.showToast(`Arquivo de backup válido detectado com ${stats.transactionsCount} transações!`, 'info');
+      } else {
+        this.parsedCloudRestorePayload = null;
+        if (previewBox) previewBox.style.display = 'none';
+        if (alertBox) {
+          alertBox.style.display = 'block';
+          alertBox.className = 'auth-alert alert-danger';
+          alertBox.textContent = inspection.error || 'Arquivo de backup inválido ou corrompido.';
+        }
+        UI.showToast('O arquivo selecionado não é um backup válido.', 'error');
+      }
+
+      UI.refreshIcons();
+    };
+
+    reader.readAsText(file);
   }
 }
 

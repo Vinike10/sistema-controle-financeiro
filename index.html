@@ -11,13 +11,20 @@
   <link rel="stylesheet" href="css/styles.css">
   <!-- Lucide Icons via unpkg -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- EmailJS SDK para envio de e-mails reais -->
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 </head>
 <body class="theme-light">
   <!-- Auth Screen Overlay (Login / Cadastro / Validação de E-mail / Recuperação) -->
   <div class="auth-overlay" id="authOverlay">
     <div class="auth-card-container">
       <div class="auth-card" id="authCard">
-        <!-- Auth Header / Brand -->
+        <!-- Auth Header / Brand & Theme Toggle -->
+        <div class="auth-header-top">
+          <button type="button" class="btn-icon btn-auth-theme-toggle" id="btnAuthThemeToggle" title="Alternar tema claro/escuro">
+            <i data-lucide="moon" id="authThemeIcon"></i>
+          </button>
+        </div>
         <div class="auth-header">
           <div class="brand-logo justify-center">
             <div class="brand-icon">
@@ -190,10 +197,10 @@
             <input type="text" maxlength="1" class="code-digit-input" id="digit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <!-- Demo Code Fast-Fill Hint -->
-          <div class="code-demo-hint" id="codeDemoHint">
-            <span>Código gerado na simulação: <strong id="demoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnAutoFillCode">Preencher Código</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código de segurança disparado para seu e-mail. Acesse sua caixa de entrada para obter o código de 6 dígitos.</span>
           </div>
 
           <div class="auth-alert" id="verifyAlert" style="display: none;"></div>
@@ -279,7 +286,7 @@
     <!-- Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
-        <div class="brand-logo">
+        <button type="button" class="brand-logo brand-logo-btn" id="btnBrandHome" data-tab="dashboard" title="Ir para o Início / Visão Geral" aria-label="Início - Control DIN">
           <div class="brand-icon">
             <i data-lucide="wallet-cards"></i>
           </div>
@@ -287,9 +294,6 @@
             <span class="brand-title">Control <span class="brand-badge">DIN</span></span>
             <span class="brand-sub">Controle Financeiro</span>
           </div>
-        </div>
-        <button class="btn-icon btn-close-sidebar" id="btnCloseSidebar" aria-label="Fechar menu">
-          <i data-lucide="x"></i>
         </button>
       </div>
 
@@ -371,6 +375,14 @@
 
           <!-- Quick Action Buttons -->
           <div class="quick-buttons">
+            <button class="btn btn-outline hide-mobile" id="btnOpenImportModal" title="Importar Planilha (CSV) ou Backup (JSON)">
+              <i data-lucide="file-up"></i>
+              <span>Importar</span>
+            </button>
+            <button class="btn btn-secondary hide-mobile" id="btnOpenCloudBackupModal" title="Central de Backup & Nuvem (E-mail, Google Drive, JSON)">
+              <i data-lucide="cloud"></i>
+              <span>Backup & Nuvem</span>
+            </button>
             <button class="btn btn-secondary" id="btnOpenTransferModal">
               <i data-lucide="arrow-right-left"></i>
               <span class="hide-mobile">Transferir</span>
@@ -412,6 +424,10 @@
               <button class="dropdown-item" id="btnOpenProfileModal">
                 <i data-lucide="user-cog"></i>
                 <span>Meu Perfil & Segurança</span>
+              </button>
+              <button class="dropdown-item" id="btnDropdownCloudBackup">
+                <i data-lucide="cloud"></i>
+                <span>Central de Backup & Nuvem</span>
               </button>
               <button class="dropdown-item" id="btnDropdownVerifyEmail" style="display: none;">
                 <i data-lucide="shield-alert"></i>
@@ -621,6 +637,11 @@
                 <button class="btn btn-outline btn-sm" id="btnResetFilters" title="Limpar filtros">
                   <i data-lucide="rotate-ccw"></i>
                   <span>Limpar</span>
+                </button>
+
+                <button class="btn btn-primary btn-sm" id="btnTxOpenImportModal" title="Importar planilha para este mês">
+                  <i data-lucide="file-up"></i>
+                  <span>Importar Planilha</span>
                 </button>
               </div>
             </div>
@@ -851,41 +872,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- GitHub Governance Rules Card -->
-            <div class="card full-width">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <h2 class="card-title">Regras de Governança do Projeto (GitHub & Agentes)</h2>
-                  <span class="card-subtitle">Padrões obrigatórios seguidos neste repositório</span>
-                </div>
-              </div>
-              <div class="card-body">
-                <div class="governance-summary">
-                  <div class="gov-item">
-                    <div class="gov-icon"><i data-lucide="git-pull-request"></i></div>
-                    <div class="gov-text">
-                      <strong>Vínculo Obrigatório no PR</strong>
-                      <p>Todo PR deve conter <code>Closes #X</code> ou <code>Fixes #X</code> na descrição apontando para sua Issue aberta.</p>
-                    </div>
-                  </div>
-                  <div class="gov-item">
-                    <div class="gov-icon"><i data-lucide="git-branch"></i></div>
-                    <div class="gov-text">
-                      <strong>Padrão de Branches</strong>
-                      <p><code>feat/issue-X-...</code>, <code>fix/issue-X-...</code>, <code>refactor/issue-X-...</code></p>
-                    </div>
-                  </div>
-                  <div class="gov-item">
-                    <div class="gov-icon"><i data-lucide="bot"></i></div>
-                    <div class="gov-text">
-                      <strong>Diretrizes de Agentes (AGENTS.md)</strong>
-                      <p>Qualquer modelo de IA que atue neste projeto deve consultar e respeitar o arquivo <code>AGENTS.md</code>.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -1071,12 +1057,16 @@
           </div>
 
           <div class="form-row" id="cardDetailsRow" style="display: none;">
-            <div class="form-group">
-              <label for="accClosingDay" class="form-label">Dia do Fechamento</label>
+            <div class="form-group flex-1">
+              <label for="accLimit" class="form-label">Limite Total (R$)</label>
+              <input type="number" step="0.01" id="accLimit" class="input-control text-right" placeholder="0,00">
+            </div>
+            <div class="form-group flex-1">
+              <label for="accClosingDay" class="form-label">Dia Fechamento</label>
               <input type="number" min="1" max="31" id="accClosingDay" class="input-control" placeholder="Ex: 25">
             </div>
-            <div class="form-group">
-              <label for="accDueDay" class="form-label">Dia do Vencimento</label>
+            <div class="form-group flex-1">
+              <label for="accDueDay" class="form-label">Dia Vencimento</label>
               <input type="number" min="1" max="31" id="accDueDay" class="input-control" placeholder="Ex: 5">
             </div>
           </div>
@@ -1290,6 +1280,137 @@
     </div>
   </div>
 
+  <!-- Modal: Importar Planilhas (CSV/Excel) ou JSON -->
+  <div class="modal-overlay" id="modalImportData">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title">📥 Importar Planilhas (CSV) ou Backup (JSON)</h3>
+          <span class="modal-subtitle">Carregue seus extratos bancários, planilhas do Excel ou restaure backups em segundos</span>
+        </div>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalImportData">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Dropzone Area -->
+        <div class="import-dropzone" id="importDropzone">
+          <div class="dropzone-icon">
+            <i data-lucide="file-spreadsheet"></i>
+          </div>
+          <h4 class="dropzone-title">Arraste e solte sua planilha ou arquivo aqui</h4>
+          <p class="dropzone-text">Suporta arquivos <strong>.CSV</strong> (Excel, extratos bancários) e <strong>.JSON</strong> (backup)</p>
+          <div class="dropzone-actions">
+            <button type="button" class="btn btn-primary" id="btnSelectImportFile">
+              <i data-lucide="folder-open"></i>
+              <span>Selecionar Arquivo no Computador</span>
+            </button>
+            <button type="button" class="btn btn-outline" id="btnDownloadModelCSV">
+              <i data-lucide="download"></i>
+              <span>📄 Baixar Planilha Modelo (.CSV)</span>
+            </button>
+          </div>
+          <input type="file" id="inputImportFile" accept=".csv, .txt, .json" style="display: none;">
+        </div>
+
+        <!-- Selected File Status Badge -->
+        <div class="selected-file-banner" id="selectedFileBanner" style="display: none;">
+          <div class="file-info-left">
+            <i data-lucide="file-check" class="text-success"></i>
+            <div>
+              <strong id="importFileName">extrato.csv</strong>
+              <span id="importFileSize" class="text-muted">12.5 KB</span>
+            </div>
+          </div>
+          <button type="button" class="btn-ghost btn-sm" id="btnRemoveSelectedFile">
+            <i data-lucide="trash-2"></i> Remover
+          </button>
+        </div>
+
+        <!-- Import Configuration Options -->
+        <div class="import-config-grid mt-3" id="importConfigGrid" style="display: none;">
+          <div class="form-group">
+            <label for="importTargetAccount" class="form-label">Atribuir Lançamentos à Conta:</label>
+            <select id="importTargetAccount" class="input-control select-control">
+              <!-- Populated dynamically with user accounts -->
+            </select>
+            <span class="input-hint">Caso a planilha não especifique a conta bancária</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Modo de Importação:</label>
+            <div class="import-mode-radios">
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="merge" checked>
+                <span><strong>Mesclar</strong> (Adicionar aos registros existentes sem apagar nada)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="importMode" value="replace">
+                <span><strong>Substituir</strong> (Substituir todas as transações atuais)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Preview Box -->
+        <div class="import-preview-box mt-3" id="importPreviewBox" style="display: none;">
+          <div class="preview-header">
+            <h4>Pré-visualização dos Lançamentos</h4>
+            <span class="badge-status-inline" id="previewTotalBadge">0 transações detectadas</span>
+          </div>
+
+          <!-- Quick KPI Cards of the Imported File -->
+          <div class="preview-kpi-grid">
+            <div class="prev-kpi-card income">
+              <span class="prev-kpi-label">Total Receitas</span>
+              <strong id="prevTotalIncome" class="text-success">R$ 0,00</strong>
+              <span class="prev-kpi-sub" id="prevCountIncome">0 lançamentos</span>
+            </div>
+            <div class="prev-kpi-card expense">
+              <span class="prev-kpi-label">Total Despesas</span>
+              <strong id="prevTotalExpense" class="text-danger">R$ 0,00</strong>
+              <span class="prev-kpi-sub" id="prevCountExpense">0 lançamentos</span>
+            </div>
+            <div class="prev-kpi-card net">
+              <span class="prev-kpi-label">Balanço do Arquivo</span>
+              <strong id="prevNetBalance">R$ 0,00</strong>
+              <span class="prev-kpi-sub">Resultado líquido</span>
+            </div>
+          </div>
+
+          <!-- Preview Table with First Rows -->
+          <div class="table-responsive mt-2">
+            <table class="data-table preview-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Descrição</th>
+                  <th>Tipo</th>
+                  <th>Categoria</th>
+                  <th class="text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody id="importPreviewTableBody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="auth-alert mt-2" id="importAlert" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalImportData">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-lg" id="btnExecuteImport" disabled>
+          <i data-lucide="check-circle-2"></i>
+          <span id="btnExecuteImportText">Importar Dados</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Verificação de E-mail (Aberto via Banner ou Perfil) -->
   <div class="modal-overlay" id="modalStandaloneVerifyEmail">
     <div class="modal-card">
@@ -1320,9 +1441,10 @@
             <input type="text" maxlength="1" class="code-digit-input standalone-digit" id="stdDigit6" inputmode="numeric" pattern="[0-9]*">
           </div>
 
-          <div class="code-demo-hint" id="stdCodeDemoHint">
-            <span>Código gerado: <strong id="stdDemoCodeValue">------</strong></span>
-            <button type="button" class="btn-badge-action" id="btnStdAutoFillCode">Preencher Código</button>
+          <!-- Notice: Email dispatched via API -->
+          <div class="email-sent-notice">
+            <i data-lucide="mail-check"></i>
+            <span>Código disparado para seu e-mail. Acesse sua caixa de entrada para conferir.</span>
           </div>
 
           <div class="auth-alert" id="stdVerifyAlert" style="display: none;"></div>
@@ -1341,10 +1463,228 @@
     </div>
   </div>
 
+  <!-- Modal: Central de Backup & Nuvem Pessoal -->
+  <div class="modal-overlay" id="modalCloudBackup">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title">☁️ Central de Backup & Nuvem Pessoal</h3>
+          <span class="modal-subtitle">Proteja suas finanças enviando cópias para seu e-mail, Google Drive ou baixando arquivos de segurança</span>
+        </div>
+        <button class="btn-icon btn-modal-close" data-close-modal="modalCloudBackup">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Backup Modal Navigation Tabs -->
+        <div class="profile-modal-tabs mb-4">
+          <button type="button" class="profile-tab-btn active" data-backup-tab="export">
+            <i data-lucide="cloud-upload"></i> Salvar / Exportar na Nuvem
+          </button>
+          <button type="button" class="profile-tab-btn" data-backup-tab="restore">
+            <i data-lucide="cloud-download"></i> Restaurar Cópia de Segurança
+          </button>
+        </div>
+
+        <!-- Tab Pane 1: Export / Cloud -->
+        <div class="backup-tab-pane active" id="paneBackupExport">
+          <!-- Last Backup Status Header -->
+          <div class="backup-status-banner">
+            <div class="backup-status-icon">
+              <i data-lucide="shield-check"></i>
+            </div>
+            <div class="backup-status-info">
+              <span class="backup-status-title">Status da Cópia de Segurança:</span>
+              <strong id="cloudBackupLastDateText">Carregando status...</strong>
+            </div>
+            <span class="badge-status-inline verified" id="cloudBackupStatusBadge">Local-First Protegido</span>
+          </div>
+
+          <!-- 4 Rich Action Cards Grid -->
+          <div class="cloud-backup-grid">
+            <!-- Card 1: E-mail (Outlook / Hotmail / Gmail) -->
+            <div class="cloud-option-card highlight-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon email-icon">
+                  <i data-lucide="mail"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Enviar Backup para meu E-mail</h4>
+                  <span class="cloud-card-badge">Outlook / Hotmail / Gmail</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Envia relatório financeiro consolidado e cópia codificada direto para sua caixa de entrada:
+                <span class="email-chip"><i data-lucide="at-sign"></i> <span id="cloudBackupTargetEmail">usuario@email.com</span></span>
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-primary w-100" id="btnCloudSendEmail">
+                  <i data-lucide="send"></i>
+                  <span>Enviar Cópia para E-mail</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 2: Google Drive / Web Share -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon drive-icon">
+                  <i data-lucide="hard-drive"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Salvar no Google Drive</h4>
+                  <span class="cloud-card-badge">Google Drive / OneDrive</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Gera o arquivo de segurança e abre as opções nativas do sistema para salvar na pasta do seu Google Drive ou OneDrive.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-secondary w-100" id="btnCloudShareDrive">
+                  <i data-lucide="upload-cloud"></i>
+                  <span>Salvar no Google Drive</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 3: Download JSON -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon json-icon">
+                  <i data-lucide="file-code-2"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Baixar Cópia (.JSON)</h4>
+                  <span class="cloud-card-badge">Backup Completo</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Baixa arquivo codificado com todas as contas, transações, categorias e metas para guardar no computador ou pendrive.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-outline w-100" id="btnCloudDownloadJSON">
+                  <i data-lucide="download"></i>
+                  <span>Baixar Arquivo JSON</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 4: Export CSV -->
+            <div class="cloud-option-card">
+              <div class="cloud-card-top">
+                <div class="cloud-card-icon csv-icon">
+                  <i data-lucide="file-spreadsheet"></i>
+                </div>
+                <div class="cloud-card-header">
+                  <h4>Exportar Extrato (.CSV)</h4>
+                  <span class="cloud-card-badge">Excel / Planilhas</span>
+                </div>
+              </div>
+              <p class="cloud-card-desc">
+                Baixa planilha de cálculo formatada com todos os lançamentos detalhados para abrir no Excel ou Google Planilhas.
+              </p>
+              <div class="cloud-card-actions">
+                <button type="button" class="btn btn-outline w-100" id="btnCloudExportCSV">
+                  <i data-lucide="file-spreadsheet"></i>
+                  <span>Baixar Extrato (.CSV)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Pane 2: Restore / Drag & Drop -->
+        <div class="backup-tab-pane" id="paneBackupRestore" style="display: none;">
+          <div class="import-dropzone" id="cloudRestoreDropzone">
+            <div class="dropzone-icon">
+              <i data-lucide="file-up"></i>
+            </div>
+            <h4 class="dropzone-title">Arraste e solte o arquivo de backup (.JSON) aqui</h4>
+            <p class="dropzone-text">Ou clique no botão abaixo para selecionar o arquivo no seu computador, celular ou pasta do Drive</p>
+            <div class="dropzone-actions">
+              <button type="button" class="btn btn-primary" id="btnSelectCloudRestoreFile">
+                <i data-lucide="folder-open"></i>
+                <span>Selecionar Arquivo .JSON</span>
+              </button>
+            </div>
+            <input type="file" id="inputCloudRestoreFile" accept=".json" style="display: none;">
+          </div>
+
+          <!-- Restore Preview Box -->
+          <div class="import-preview-box mt-3" id="cloudRestorePreviewBox" style="display: none;">
+            <div class="preview-header">
+              <h4>Pré-visualização do Backup Detectado</h4>
+              <span class="badge-status-inline verified" id="cloudRestoreValidBadge">Backup Válido</span>
+            </div>
+
+            <div class="preview-kpi-grid">
+              <div class="prev-kpi-card income">
+                <span class="prev-kpi-label">Transações</span>
+                <strong id="cloudRestoreTxCount" class="text-success">0</strong>
+                <span class="prev-kpi-sub">lançamentos</span>
+              </div>
+              <div class="prev-kpi-card">
+                <span class="prev-kpi-label">Contas / Bancos</span>
+                <strong id="cloudRestoreAccCount">0</strong>
+                <span class="prev-kpi-sub">contas ativas</span>
+              </div>
+              <div class="prev-kpi-card">
+                <span class="prev-kpi-label">Metas & Orçamentos</span>
+                <strong id="cloudRestoreGoalsCount">0</strong>
+                <span class="prev-kpi-sub">metas configuradas</span>
+              </div>
+              <div class="prev-kpi-card net">
+                <span class="prev-kpi-label">Data do Backup</span>
+                <strong id="cloudRestoreDateText" style="font-size: 0.875rem;">--</strong>
+                <span class="prev-kpi-sub" id="cloudRestoreUserText">--</span>
+              </div>
+            </div>
+
+            <div class="form-group mt-3">
+              <label class="form-label">Modo de Restauração:</label>
+              <div class="import-mode-radios">
+                <label class="radio-label">
+                  <input type="radio" name="cloudRestoreMode" value="replace" checked>
+                  <span><strong>Substituir Base Atual</strong> (Restaura exatamente o estado do arquivo)</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="cloudRestoreMode" value="merge">
+                  <span><strong>Mesclar Dados</strong> (Combina com os registros atuais sem apagar novos lançamentos)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="modal-footer px-0 pb-0 mt-3">
+              <button type="button" class="btn btn-secondary" id="btnCancelCloudRestore">Cancelar Seleção</button>
+              <button type="button" class="btn btn-primary btn-lg" id="btnExecuteCloudRestore">
+                <i data-lucide="check-circle-2"></i>
+                <span>Confirmar Restauração</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-alert mt-2" id="cloudRestoreAlert" style="display: none;"></div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="modalCloudBackup">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification Container -->
   <div class="toast-container" id="toastContainer"></div>
 
-  <!-- Main JavaScript modules -->
-  <script type="module" src="js/app.js"></script>
+  <!-- Main JavaScript modules (Compatibilidade total com protocolo file:// e http://) -->
+  <script src="js/auth.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/transactions.js"></script>
+  <script src="js/accounts.js"></script>
+  <script src="js/budgets.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
 </body>
 </html>

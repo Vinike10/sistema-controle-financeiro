@@ -4,32 +4,46 @@
  * contadores numéricos animados e animações escalonadas (staggered).
  */
 
-import { Storage } from './storage.js';
-import { Transactions } from './transactions.js';
-import { Accounts } from './accounts.js';
-import { Budgets, Goals } from './budgets.js';
-import { Charts } from './charts.js';
-
 // Cache para interpolação de contadores
 const numericValuesCache = new Map();
 
-export const UI = {
+const UI = {
+  // Manipuladores seguros do DOM para prevenir exceções caso elementos não existam
+  safeSetText(elementId, text) {
+    const el = document.getElementById(elementId);
+    if (el) el.textContent = text !== undefined && text !== null ? text : '';
+    return el;
+  },
+
+  safeSetHTML(elementId, html) {
+    const el = document.getElementById(elementId);
+    if (el) el.innerHTML = html !== undefined && html !== null ? html : '';
+    return el;
+  },
+
   // Inicialização e atualização de ícones Lucide
   refreshIcons() {
-    if (window.lucide) {
-      window.lucide.createIcons();
+    try {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    } catch (err) {
+      console.warn('[UI] Falha ao renderizar ícones Lucide:', err);
     }
   },
 
-  // Formatação de Moeda Brasileira (R$)
+  // Formatação de Moeda Brasileira (R$) com proteção defensiva
   formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+    const num = (typeof value === 'number' && !isNaN(value)) ? value : (parseFloat(value) || 0);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
   },
 
   // Formatação de Data Brasileira (DD/MM/YYYY)
   formatDate(dateString) {
-    if (!dateString) return '--';
-    const [year, month, day] = dateString.split('-');
+    if (!dateString || typeof dateString !== 'string') return '--';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString;
+    const [year, month, day] = parts;
     return `${day}/${month}/${year}`;
   },
 
@@ -481,10 +495,13 @@ export const UI = {
               <span class="legend-color-dot" style="background-color: ${b.categoryColor}"></span>
               ${b.categoryName}
             </span>
-            <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span class="budget-amounts ${b.status === 'danger' ? 'text-danger' : ''}">
                 Gasto: <strong>${this.formatCurrency(b.spent)}</strong> / Teto: <strong>${this.formatCurrency(b.monthlyLimit)}</strong>
               </span>
+              <button class="btn-icon btn-sm" data-action="edit-budget" data-id="${b.id}" title="Editar orçamento">
+                <i data-lucide="edit-2"></i>
+              </button>
               <button class="btn-icon btn-sm text-danger" data-action="delete-budget" data-id="${b.id}" title="Excluir orçamento">
                 <i data-lucide="trash-2"></i>
               </button>
@@ -529,9 +546,12 @@ export const UI = {
                 <span style="font-size: 0.75rem; color: var(--text-muted);">
                   ${g.deadline ? `Prazo: ${this.formatDate(g.deadline)}` : 'Sem prazo'}
                 </span>
-                <div style="display: flex; gap: 0.5rem;">
+                <div style="display: flex; gap: 0.35rem;">
                   <button class="btn btn-secondary btn-sm" data-action="deposit-goal" data-id="${g.id}">
                     <i data-lucide="plus"></i> Aporte
+                  </button>
+                  <button class="btn-icon btn-sm" data-action="edit-goal" data-id="${g.id}" title="Editar meta">
+                    <i data-lucide="edit-2"></i>
                   </button>
                   <button class="btn-icon btn-sm text-danger" data-action="delete-goal" data-id="${g.id}" title="Excluir meta">
                     <i data-lucide="trash-2"></i>
@@ -656,28 +676,34 @@ export const UI = {
 
   // Notificação Toast com Animação de Entrada e Saída
   showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+    try {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
 
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    
-    let iconName = 'info';
-    if (type === 'success') iconName = 'check-circle';
-    if (type === 'error') iconName = 'alert-triangle';
+      const safeType = (type === 'danger') ? 'error' : type;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${safeType}`;
+      
+      let iconName = 'info';
+      if (safeType === 'success') iconName = 'check-circle';
+      if (safeType === 'error') iconName = 'alert-triangle';
+      if (safeType === 'warning') iconName = 'alert-circle';
 
-    toast.innerHTML = `
-      <i data-lucide="${iconName}"></i>
-      <span>${message}</span>
-    `;
+      toast.innerHTML = `
+        <i data-lucide="${iconName}"></i>
+        <span>${message || 'Aviso do sistema'}</span>
+      `;
 
-    container.appendChild(toast);
-    this.refreshIcons();
+      container.appendChild(toast);
+      this.refreshIcons();
 
-    setTimeout(() => {
-      toast.classList.add('closing');
-      setTimeout(() => toast.remove(), 250);
-    }, 3200);
+      setTimeout(() => {
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    } catch (err) {
+      console.warn('[UI] Falha ao exibir Toast:', err);
+    }
   },
 
   // ==========================================================================
@@ -917,16 +943,13 @@ export const UI = {
   },
 
   // Abre modal de verificação avulso
-  openStandaloneVerifyModal(user, code = null) {
+  openStandaloneVerifyModal(user) {
     if (!user) return;
     const modal = document.getElementById('modalStandaloneVerifyEmail');
     if (!modal) return;
 
     const emailEl = document.getElementById('standaloneVerifyEmail');
-    const codeEl = document.getElementById('stdDemoCodeValue');
-
     if (emailEl) emailEl.textContent = user.email;
-    if (codeEl) codeEl.textContent = code || user.verificationCode || '------';
 
     // Limpa inputs de dígito
     for (let i = 1; i <= 6; i++) {
@@ -939,4 +962,6 @@ export const UI = {
     this.refreshIcons();
   }
 };
+
+window.UI = UI;
 

@@ -12,6 +12,7 @@ Este catálogo centraliza todas as issues planejadas e especificadas para o proj
 | **#03** | `✨ Funcionalidade` | Fluxo de Verificação de E-mail (Token 6 Dígitos) e Recuperação de Senha | `funcionalidade`, `auth`, `ux` | `feat/issue-03-email-verification-password-reset` |
 | **#04** | `🚀 Melhoria` | Isolamento de Dados Multi-tenant por Usuário e Gestão de Perfil | `melhoria`, `storage`, `ui` | `refactor/issue-04-multi-tenant-user-profile` |
 | **#05** | `📚 Documentação` | Atualização das Diretrizes de Governança e Regras para Agentes de IA | `documentacao`, `governanca` | `docs/issue-05-agents-governance-update` |
+| **#10** | `🚀 Melhoria` | Sistema Global de Tratamento de Erros, Validação Defensiva e Resiliência | `melhoria`, `qualidade`, `seguranca` | `refactor/issue-10-error-handling-resilience` |
 
 ---
 

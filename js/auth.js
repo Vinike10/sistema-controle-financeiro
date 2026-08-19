@@ -11,26 +11,123 @@ const AUTH_STORAGE_KEYS = {
   REMEMBER: 'controldin_auth_remember_v1'
 };
 
-export const Auth = {
+// Fallback em JavaScript puro para SHA-256 caso crypto.subtle não esteja disponível no ambiente
+function sha256Fallback(str) {
+  function rightRotate(value, amount) {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let i, j;
+  let result = '';
+
+  const words = [];
+  const ascii = unescape(encodeURIComponent(str));
+  const asciiBitLength = ascii.length * 8;
+  
+  let hash = [];
+  let k = [];
+  let primeCounter = 0;
+
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) {
+        isComposite[i] = candidate;
+      }
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  
+  let s = ascii + '\x80';
+  while (s.length % 64 !== 56) s += '\x00';
+  for (i = 0; i < s.length; i++) {
+    j = s.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash.slice(0);
+    
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15] || 0, w2 = w[i - 2] || 0;
+      const a = hash[0], e = hash[4];
+      const temp1 = (hash[7] || 0)
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? (w[i] || 0) : (
+            (w[i - 16] || 0)
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + (w[i - 7] || 0)
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0
+        );
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      
+      hash = [(temp1 + temp2) | 0].concat(hash.slice(0, 7));
+      hash[4] = ((hash[4] || 0) + temp1) | 0;
+    }
+    
+    for (i = 0; i < 8; i++) {
+      hash[i] = ((hash[i] || 0) + (oldHash[i] || 0)) | 0;
+    }
+  }
+  
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (8 * j)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
+const Auth = {
   // ==========================================================================
-  // 1. Criptografia & Segurança (Web Crypto API)
+  // 1. Criptografia & Segurança (Web Crypto API + Fallback)
   // ==========================================================================
 
   // Gera um Salt pseudoaleatório criptográfico de 16 bytes em Hexadecimal
   generateSalt() {
-    const array = new Uint8Array(16);
-    window.crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    try {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint8Array(16);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+      }
+    } catch {
+      // Fallback
+    }
+    // Fallback pseudoaleatório
+    let salt = '';
+    for (let i = 0; i < 32; i++) {
+      salt += Math.floor(Math.random() * 16).toString(16);
+    }
+    return salt;
   },
 
-  // Gera o Hash seguro da senha com Salt utilizando SHA-256
+  // Gera o Hash seguro da senha com Salt utilizando SHA-256 (Web Crypto com fallback)
   async hashPassword(password, salt) {
-    const encoder = new TextEncoder();
-    // Concatena a senha com o Salt exclusivo do usuário
-    const data = encoder.encode(password + ':' + salt);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const rawPayload = (password || '') + ':' + (salt || '');
+    try {
+      if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(rawPayload);
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch (err) {
+      console.warn('[Auth] Web Crypto API falhou, usando fallback seguro:', err);
+    }
+    // Fallback nativo
+    return sha256Fallback(rawPayload);
   },
 
   // Medidor de entropia e força da senha
@@ -276,11 +373,106 @@ export const Auth = {
     this.saveUsers(users);
     this.setCurrentSession(newUser, true);
 
+    // Dispara envio de e-mail real em segundo plano
+    this.sendRealEmail({ toEmail: newUser.email, toName: newUser.name, code: verificationCode, type: 'verification' })
+      .catch(e => console.warn('Disparo de e-mail:', e));
+
     return {
       success: true,
       user: newUser,
-      verificationCode, // Retornado para exibição de simulação/toast
-      message: 'Conta criada com sucesso! Um código de verificação foi gerado para seu e-mail.'
+      message: 'Conta criada com sucesso! O código de validação de 6 dígitos foi enviado para seu e-mail.'
+    };
+  },
+
+  // Envio de E-mail Real (EmailJS com parâmetros completos)
+  async sendRealEmail({ toEmail, toName, code, type = 'verification' }) {
+    const isReset = type === 'reset';
+    const subject = isReset 
+      ? `🔐 Recuperação de Senha - Control DIN: [${code}]`
+      : `🔐 Seu Código de Ativação - Control DIN: [${code}]`;
+    
+    // 1. Envio prioritário via EmailJS
+    const emailConfig = (typeof Storage !== 'undefined' && Storage.getEmailSettings) ? Storage.getEmailSettings() : null;
+    if (window.emailjs && emailConfig && emailConfig.serviceId && emailConfig.publicKey) {
+      const templatesToTry = [emailConfig.templateId || 'template_2apm937', 'template_tzniljv'].filter(Boolean);
+      
+      for (const tId of templatesToTry) {
+        try {
+          emailjs.init(emailConfig.publicKey);
+          const formattedMessage = 
+`========================================
+🔐 CÓDIGO DE VALIDAÇÃO CONTROL DIN: [ ${code} ]
+========================================
+
+Olá, ${toName || 'Usuário'}!
+
+Para validar o seu endereço de e-mail e liberar seu acesso seguro ao sistema Control DIN, utilize o código de 6 dígitos abaixo:
+
+👉 SEU CÓDIGO: ${code}
+
+⏱️ Validade: 15 minutos.
+🔒 Digite este código no formulário de verificação do sistema para ativar sua conta.
+
+Se você não solicitou esta validação, ignore este e-mail.
+
+--
+Control DIN - Gestão Financeira Inteligente`;
+
+          const templateParams = {
+            to_email: toEmail,
+            email: toEmail,
+            reply_to: toEmail,
+            to_name: toName || 'Usuário',
+            from_name: 'Control DIN - Segurança',
+            name: toName || 'Usuário',
+            code: code,
+            passcode: code,
+            token: code,
+            verification_code: code,
+            codigo: code,
+            subject: subject,
+            message: formattedMessage,
+            user_message: formattedMessage
+          };
+
+          const response = await emailjs.send(emailConfig.serviceId, tId, templateParams);
+          if (response.status === 200 || response.text === 'OK') {
+            return { success: true, provider: 'EmailJS', message: `E-mail com código enviado com sucesso para ${toEmail}!` };
+          }
+        } catch (err) {
+          console.warn(`Tentativa com template ${tId} falhou:`, err);
+        }
+      }
+    }
+
+    // 2. Fallback via FormSubmit
+    try {
+      const response = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(toEmail)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: subject,
+          _template: 'table',
+          'Sistema': 'Control DIN - Controle Financeiro',
+          'Destinatario': toName || 'Usuário',
+          'Codigo_de_Seguranca': code,
+          'Validade': '15 minutos'
+        })
+      });
+      if (response.ok) {
+        return { success: true, provider: 'FormSubmit', message: `E-mail disparado para ${toEmail}!` };
+      }
+    } catch (e) {
+      console.warn('FormSubmit:', e);
+    }
+
+    return { 
+      success: false,
+      isConfigMissing: !emailConfig || !emailConfig.publicKey,
+      message: 'Configure suas chaves do EmailJS em Configurações para disparo direto.'
     };
   },
 
@@ -409,10 +601,12 @@ export const Auth = {
     user.verificationExpires = Date.now() + 15 * 60 * 1000; // 15 min
     this.saveUsers(users);
 
+    this.sendRealEmail({ toEmail: user.email, toName: user.name, code: newCode, type: 'verification' })
+      .catch(e => console.warn('Erro ao reenviar e-mail real:', e));
+
     return {
       success: true,
-      code: newCode,
-      message: `Novo código gerado: ${newCode} (Válido por 15 minutos).`
+      message: `Novo código de verificação enviado para ${user.email}.`
     };
   },
 
@@ -436,10 +630,12 @@ export const Auth = {
     user.resetExpires = Date.now() + 15 * 60 * 1000;
     this.saveUsers(users);
 
+    this.sendRealEmail({ toEmail: user.email, toName: user.name, code: resetCode, type: 'reset' })
+      .catch(e => console.warn('Erro ao disparar e-mail de recuperação:', e));
+
     return {
       success: true,
-      code: resetCode,
-      message: `Código de recuperação gerado para ${user.email}.`
+      message: `Código de recuperação enviado para ${user.email}.`
     };
   },
 
@@ -540,3 +736,5 @@ export const Auth = {
     this.clearSession();
   }
 };
+
+window.Auth = Auth;
