@@ -4,15 +4,67 @@
  */
 
 const Transactions = {
+  // Utilitário de parsing e sanitização monetária defensiva
+  parseAmount(val) {
+    if (typeof val === 'number') {
+      return (isNaN(val) || !isFinite(val)) ? 0 : Number(val.toFixed(2));
+    }
+    if (!val || typeof val !== 'string') return 0;
+
+    let clean = val.replace(/[^\d.,\-+]/g, '').trim();
+    if (clean.includes(',') && clean.includes('.')) {
+      if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+        clean = clean.replace(/\./g, '').replace(',', '.');
+      } else {
+        clean = clean.replace(/,/g, '');
+      }
+    } else if (clean.includes(',')) {
+      clean = clean.replace(',', '.');
+    }
+
+    const num = parseFloat(clean);
+    return (isNaN(num) || !isFinite(num)) ? 0 : Number(num.toFixed(2));
+  },
+
+  // Validação e normalização de data ISO (YYYY-MM-DD)
+  validateDate(dateString) {
+    if (!dateString || typeof dateString !== 'string') {
+      return new Date().toISOString().slice(0, 10);
+    }
+    const match = dateString.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+      return new Date().toISOString().slice(0, 10);
+    }
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10);
+    const day = parseInt(match[3], 10);
+
+    if (month < 1 || month > 12) return new Date().toISOString().slice(0, 10);
+    const maxDays = new Date(year, month, 0).getDate();
+    const safeDay = Math.min(Math.max(1, day), maxDays);
+    return `${year}-${String(month).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`;
+  },
+
+  // Gera ID único garantido contra colisões
+  generateUniqueId(prefix = 'tx') {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  },
+
   // Retorna todas as transações
   getAll() {
-    return Storage.getTransactions();
+    try {
+      return Storage.getTransactions();
+    } catch (err) {
+      console.warn('[Transactions] Erro ao recuperar transações:', err);
+      return [];
+    }
   },
 
   // Retorna transação por ID
   getById(id) {
+    if (!id) return null;
     const all = this.getAll();
-    return all.find(t => t.id === id);
+    return all.find(t => t.id === id) || null;
   },
 
   // Cria transação (alias)
@@ -20,49 +72,72 @@ const Transactions = {
     return this.add(txData, installments);
   },
 
+  // Alias explícito para criação de compras parceladas
+  createInstallments(txParams) {
+    const { installments = 1, ...rest } = txParams;
+    return this.add(rest, installments);
+  },
+
   // Retorna transações filtradas por Ano e Mês (ex: year = 2026, month = 8)
   getByPeriod(year, month) {
     const all = this.getAll();
     const targetPrefix = `${year}-${String(month).padStart(2, '0')}`;
-    return all.filter(tx => tx.date.startsWith(targetPrefix));
+    return all.filter(tx => tx && tx.date && tx.date.startsWith(targetPrefix));
   },
 
-  // Adiciona transação (com suporte a parcelamento automático em X vezes)
+  // Adiciona transação (com suporte a parcelamento automático e soma exata de centavos)
   add(txData, installments = 1) {
+    if (!txData || typeof txData !== 'object') {
+      throw new Error('Dados da transação inválidos.');
+    }
+
     const all = this.getAll();
     const createdTransactions = [];
-    const baseAmount = Number(txData.amount);
+    const baseAmount = this.parseAmount(txData.amount);
+    const safeDate = this.validateDate(txData.date);
 
-    if (installments > 1 && txData.type === 'expense') {
-      const installmentAmount = +(baseAmount / installments).toFixed(2);
-      const [yearStr, monthStr, dayStr] = txData.date.split('-');
+    if (baseAmount <= 0) {
+      throw new Error('O valor da transação deve ser maior que zero.');
+    }
+
+    const safeInstallments = Math.max(1, parseInt(installments, 10) || 1);
+
+    if (safeInstallments > 1 && txData.type === 'expense') {
+      // Cálculo preciso de centavos para garantir que a soma total seja exata
+      const totalCents = Math.round(baseAmount * 100);
+      const baseInstallmentCents = Math.floor(totalCents / safeInstallments);
+      const remainderCents = totalCents - (baseInstallmentCents * safeInstallments);
+
+      const [yearStr, monthStr, dayStr] = safeDate.split('-');
       let currentYear = parseInt(yearStr, 10);
       let currentMonth = parseInt(monthStr, 10);
       const day = parseInt(dayStr, 10);
 
-      for (let i = 1; i <= installments; i++) {
-        // Formata data da parcela
+      for (let i = 1; i <= safeInstallments; i++) {
         const formattedMonth = String(currentMonth).padStart(2, '0');
-        // Ajusta se o dia for maior que os dias do mês
         const maxDaysInMonth = new Date(currentYear, currentMonth, 0).getDate();
         const safeDay = String(Math.min(day, maxDaysInMonth)).padStart(2, '0');
         const installmentDate = `${currentYear}-${formattedMonth}-${safeDay}`;
 
+        // A primeira parcela absorve o resíduo de centavos do arredondamento
+        const centsForThisInstallment = i === 1 ? (baseInstallmentCents + remainderCents) : baseInstallmentCents;
+        const installmentAmount = Number((centsForThisInstallment / 100).toFixed(2));
+
         const newTx = {
           ...txData,
-          id: `tx-${Date.now()}-${i}`,
-          description: `${txData.description} (${i}/${installments})`,
+          id: this.generateUniqueId(`tx-inst-${i}`),
+          description: `${txData.description || 'Despesa Parcelada'} (${i}/${safeInstallments})`,
           amount: installmentAmount,
           date: installmentDate,
-          status: i === 1 ? txData.status : 'pending',
+          status: i === 1 ? (txData.status || 'paid') : 'pending',
           installmentIndex: i,
-          installmentTotal: installments,
+          installmentTotal: safeInstallments,
           createdAt: new Date().toISOString()
         };
 
         createdTransactions.push(newTx);
 
-        // Avança para o próximo mês
+        // Avança para o próximo mês com ajuste de ano
         currentMonth++;
         if (currentMonth > 12) {
           currentMonth = 1;
@@ -72,8 +147,11 @@ const Transactions = {
     } else {
       const newTx = {
         ...txData,
-        id: txData.id || `tx-${Date.now()}`,
+        id: txData.id || this.generateUniqueId('tx'),
         amount: baseAmount,
+        date: safeDate,
+        description: txData.description ? txData.description.trim() : 'Sem descrição',
+        status: txData.status === 'pending' ? 'pending' : 'paid',
         createdAt: new Date().toISOString()
       };
       createdTransactions.push(newTx);
@@ -86,14 +164,20 @@ const Transactions = {
 
   // Atualiza uma transação existente
   update(id, updatedFields) {
+    if (!id || !updatedFields) return false;
     const all = this.getAll();
     const index = all.findIndex(t => t.id === id);
     if (index === -1) return false;
 
+    const current = all[index];
+    const newAmount = updatedFields.amount !== undefined ? this.parseAmount(updatedFields.amount) : current.amount;
+    const newDate = updatedFields.date !== undefined ? this.validateDate(updatedFields.date) : current.date;
+
     all[index] = {
-      ...all[index],
+      ...current,
       ...updatedFields,
-      amount: Number(updatedFields.amount !== undefined ? updatedFields.amount : all[index].amount),
+      amount: newAmount,
+      date: newDate,
       updatedAt: new Date().toISOString()
     };
 
@@ -103,6 +187,7 @@ const Transactions = {
 
   // Exclui uma transação
   delete(id) {
+    if (!id) return false;
     const all = this.getAll();
     const filtered = all.filter(t => t.id !== id);
     Storage.saveTransactions(filtered);
@@ -111,6 +196,7 @@ const Transactions = {
 
   // Alterna o status entre 'paid' e 'pending'
   toggleStatus(id) {
+    if (!id) return false;
     const all = this.getAll();
     const item = all.find(t => t.id === id);
     if (!item) return false;

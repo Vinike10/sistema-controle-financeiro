@@ -27,6 +27,9 @@ class App {
   }
 
   async init() {
+    // 0. Configura interceptores globais de erros síncronos e assíncronos
+    this.setupGlobalErrorHandlers();
+
     try {
       // 1. Inicializa o serviço de autenticação
       await Auth.initAuth();
@@ -47,13 +50,35 @@ class App {
         UI.showAuthModal('login');
       }
     } catch (err) {
-      console.error('Erro na inicialização:', err);
+      console.error('Erro na inicialização do sistema:', err);
       // Fallback: garante que a UI e período sejam exibidos mesmo em caso de erro isolado
       this.updatePeriodDisplay();
       UI.refreshIcons();
     }
 
     UI.refreshIcons();
+  }
+
+  // Interceptores globais para capturar exceções não tratadas sem travar a aplicação
+  setupGlobalErrorHandlers() {
+    window.addEventListener('error', (event) => {
+      console.error('[App Global Error]:', event.error || event.message);
+      // Ignora ruídos de extensões externas do navegador
+      if (event.filename && !event.filename.includes(window.location.host) && !event.filename.includes('localhost') && !event.filename.includes('127.0.0.1')) {
+        return;
+      }
+      if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast('Instabilidade pontual detectada. A interface foi mantida segura.', 'warning');
+      }
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+      console.warn('[App Unhandled Rejection]:', event.reason);
+      const reasonMsg = (event.reason && event.reason.message) ? event.reason.message : 'Operação assíncrona não concluída';
+      if (typeof UI !== 'undefined' && UI.showToast) {
+        UI.showToast(`Aviso: ${reasonMsg}`, 'warning');
+      }
+    });
   }
 
   // Executado quando um usuário é autenticado com sucesso (Login, Cadastro ou Demo)
@@ -776,37 +801,51 @@ class App {
 
     document.getElementById('formTransaction')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('txId').value;
-      const type = document.getElementById('txType').value;
-      const description = document.getElementById('txDescription').value.trim();
-      const amount = parseFloat(document.getElementById('txAmount').value);
-      const categoryId = document.getElementById('txCategory').value;
-      const accountId = document.getElementById('txAccount').value;
-      const date = document.getElementById('txDate').value;
-      const status = document.getElementById('txStatus').value;
-      const notes = document.getElementById('txNotes').value.trim();
-      const installments = parseInt(document.getElementById('txInstallments').value, 10) || 1;
+      try {
+        const id = document.getElementById('txId').value;
+        const type = document.getElementById('txType').value;
+        const description = document.getElementById('txDescription').value.trim();
+        const amount = Transactions.parseAmount(document.getElementById('txAmount').value);
+        const categoryId = document.getElementById('txCategory').value;
+        const accountId = document.getElementById('txAccount').value;
+        const date = document.getElementById('txDate').value;
+        const status = document.getElementById('txStatus').value;
+        const notes = document.getElementById('txNotes').value.trim();
+        const installments = parseInt(document.getElementById('txInstallments').value, 10) || 1;
 
-      if (!description || isNaN(amount) || amount <= 0 || !date) {
-        UI.showToast('Preencha os campos obrigatórios corretamente.', 'error');
-        return;
-      }
-
-      if (id) {
-        Transactions.update(id, { description, amount, type, categoryId, accountId, date, status, notes });
-        UI.showToast('Transação atualizada com sucesso!', 'success');
-      } else {
-        if (installments > 1 && type === 'expense') {
-          Transactions.createInstallments({ description, amount, categoryId, accountId, date, status, notes, installments });
-          UI.showToast(`Transação criada em ${installments} parcelas com sucesso!`, 'success');
-        } else {
-          Transactions.create({ description, amount, type, categoryId, accountId, date, status, notes });
-          UI.showToast('Transação registrada com sucesso!', 'success');
+        if (!description) {
+          UI.showToast('Informe a descrição da transação.', 'error');
+          return;
         }
-      }
 
-      this.closeModal('modalTransaction');
-      this.renderCurrentView(false);
+        if (amount <= 0) {
+          UI.showToast('Informe um valor monetário válido maior que zero.', 'error');
+          return;
+        }
+
+        if (!date) {
+          UI.showToast('Informe a data da transação.', 'error');
+          return;
+        }
+
+        if (id) {
+          Transactions.update(id, { description, amount, type, categoryId, accountId, date, status, notes });
+          UI.showToast('Transação atualizada com sucesso!', 'success');
+        } else {
+          if (installments > 1 && type === 'expense') {
+            Transactions.createInstallments({ description, amount, categoryId, accountId, date, status, notes, installments });
+            UI.showToast(`Transação criada em ${installments} parcelas com sucesso!`, 'success');
+          } else {
+            Transactions.create({ description, amount, type, categoryId, accountId, date, status, notes });
+            UI.showToast('Transação registrada com sucesso!', 'success');
+          }
+        }
+
+        this.closeModal('modalTransaction');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar transação: ${err.message}`, 'error');
+      }
     });
 
     // ==================== MODAL DE TRANSFERÊNCIA ====================
@@ -823,29 +862,33 @@ class App {
 
     document.getElementById('formTransfer')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const fromAccountId = document.getElementById('transferFrom').value;
-      const toAccountId = document.getElementById('transferTo').value;
-      const amount = parseFloat(document.getElementById('transferAmount').value);
-      const date = document.getElementById('transferDate').value;
-      const notes = document.getElementById('transferNotes').value.trim();
+      try {
+        const fromAccountId = document.getElementById('transferFrom').value;
+        const toAccountId = document.getElementById('transferTo').value;
+        const amount = Accounts.parseAmount(document.getElementById('transferAmount').value);
+        const date = document.getElementById('transferDate').value;
+        const notes = document.getElementById('transferNotes').value.trim();
 
-      if (fromAccountId === toAccountId) {
-        UI.showToast('A conta de origem e destino não podem ser as mesmas.', 'error');
-        return;
-      }
+        if (fromAccountId === toAccountId) {
+          UI.showToast('A conta de origem e destino não podem ser as mesmas.', 'error');
+          return;
+        }
 
-      if (isNaN(amount) || amount <= 0 || !date) {
-        UI.showToast('Informe um valor de transferência válido.', 'error');
-        return;
-      }
+        if (amount <= 0 || !date) {
+          UI.showToast('Informe um valor de transferência válido maior que zero.', 'error');
+          return;
+        }
 
-      const result = Accounts.transfer(fromAccountId, toAccountId, amount, date, notes);
-      if (result.success) {
-        UI.showToast(result.message, 'success');
-        this.closeModal('modalTransfer');
-        this.renderCurrentView(false);
-      } else {
-        UI.showToast(result.message, 'error');
+        const result = Accounts.transfer(fromAccountId, toAccountId, amount, date, notes);
+        if (result.success) {
+          UI.showToast(result.message, 'success');
+          this.closeModal('modalTransfer');
+          this.renderCurrentView(false);
+        } else {
+          UI.showToast(result.message, 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro na transferência: ${err.message}`, 'error');
       }
     });
 
@@ -869,31 +912,35 @@ class App {
 
     document.getElementById('formAccount')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('accId').value;
-      const name = document.getElementById('accName').value.trim();
-      const type = document.getElementById('accType').value;
-      const initialBalance = parseFloat(document.getElementById('accInitialBalance').value) || 0;
-      const color = document.getElementById('accColor').value;
-      const limit = parseFloat(document.getElementById('accLimit')?.value) || 0;
-      const closingDay = parseInt(document.getElementById('accClosingDay').value, 10) || null;
-      const dueDay = parseInt(document.getElementById('accDueDay').value, 10) || null;
+      try {
+        const id = document.getElementById('accId').value;
+        const name = document.getElementById('accName').value.trim();
+        const type = document.getElementById('accType').value;
+        const initialBalance = Accounts.parseAmount(document.getElementById('accInitialBalance').value);
+        const color = document.getElementById('accColor').value;
+        const limit = Accounts.parseAmount(document.getElementById('accLimit')?.value);
+        const closingDay = parseInt(document.getElementById('accClosingDay').value, 10) || null;
+        const dueDay = parseInt(document.getElementById('accDueDay').value, 10) || null;
 
-      if (!name) {
-        UI.showToast('Informe o nome da conta.', 'error');
-        return;
+        if (!name) {
+          UI.showToast('Informe o nome da conta.', 'error');
+          return;
+        }
+
+        if (id) {
+          Accounts.update(id, { name, type, initialBalance, color, limit, closingDay, dueDay });
+          UI.showToast('Conta atualizada com sucesso!', 'success');
+        } else {
+          Accounts.create({ name, type, initialBalance, color, limit, closingDay, dueDay });
+          UI.showToast('Conta criada com sucesso!', 'success');
+        }
+
+        UI.populateSelects();
+        this.closeModal('modalAccount');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar conta: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Accounts.update(id, { name, type, initialBalance, color, limit, closingDay, dueDay });
-        UI.showToast('Conta atualizada com sucesso!', 'success');
-      } else {
-        Accounts.create({ name, type, initialBalance, color, limit, closingDay, dueDay });
-        UI.showToast('Conta criada com sucesso!', 'success');
-      }
-
-      UI.populateSelects();
-      this.closeModal('modalAccount');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE ORÇAMENTO ====================
@@ -907,25 +954,29 @@ class App {
 
     document.getElementById('formBudget')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('budgetId').value;
-      const categoryId = document.getElementById('budgetCategory').value;
-      const monthlyLimit = parseFloat(document.getElementById('budgetLimit').value);
+      try {
+        const id = document.getElementById('budgetId').value;
+        const categoryId = document.getElementById('budgetCategory').value;
+        const monthlyLimit = parseFloat(document.getElementById('budgetLimit').value);
 
-      if (!categoryId || isNaN(monthlyLimit) || monthlyLimit <= 0) {
-        UI.showToast('Preencha os campos do orçamento corretamente.', 'error');
-        return;
+        if (!categoryId || isNaN(monthlyLimit) || monthlyLimit <= 0) {
+          UI.showToast('Preencha os campos do orçamento corretamente com um limite maior que zero.', 'error');
+          return;
+        }
+
+        if (id) {
+          Budgets.update(id, { categoryId, monthlyLimit });
+          UI.showToast('Orçamento atualizado!', 'success');
+        } else {
+          Budgets.create({ categoryId, monthlyLimit });
+          UI.showToast('Orçamento definido com sucesso!', 'success');
+        }
+
+        this.closeModal('modalBudget');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar orçamento: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Budgets.update(id, { categoryId, monthlyLimit });
-        UI.showToast('Orçamento atualizado!', 'success');
-      } else {
-        Budgets.create({ categoryId, monthlyLimit });
-        UI.showToast('Orçamento definido com sucesso!', 'success');
-      }
-
-      this.closeModal('modalBudget');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE META ====================
@@ -939,48 +990,58 @@ class App {
 
     document.getElementById('formGoal')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const id = document.getElementById('goalId').value;
-      const title = document.getElementById('goalTitle').value.trim();
-      const targetAmount = parseFloat(document.getElementById('goalTargetAmount').value);
-      const currentAmount = parseFloat(document.getElementById('goalCurrentAmount').value) || 0;
-      const deadline = document.getElementById('goalDeadline').value;
-      const color = document.getElementById('goalColor').value;
+      try {
+        const id = document.getElementById('goalId').value;
+        const title = document.getElementById('goalTitle').value.trim();
+        const targetAmount = parseFloat(document.getElementById('goalTargetAmount').value);
+        const currentAmount = parseFloat(document.getElementById('goalCurrentAmount').value) || 0;
+        const deadline = document.getElementById('goalDeadline').value;
+        const color = document.getElementById('goalColor').value;
 
-      if (!title || isNaN(targetAmount) || targetAmount <= 0) {
-        UI.showToast('Preencha os dados da meta corretamente.', 'error');
-        return;
+        if (!title || isNaN(targetAmount) || targetAmount <= 0) {
+          UI.showToast('Preencha os dados da meta corretamente com um valor alvo maior que zero.', 'error');
+          return;
+        }
+
+        if (id) {
+          Goals.update(id, { title, targetAmount, currentAmount, deadline, color });
+          UI.showToast('Meta atualizada!', 'success');
+        } else {
+          Goals.create({ title, targetAmount, currentAmount, deadline, color });
+          UI.showToast('Meta criada com sucesso!', 'success');
+        }
+
+        this.closeModal('modalGoal');
+        this.renderCurrentView(false);
+      } catch (err) {
+        UI.showToast(`Erro ao salvar meta: ${err.message}`, 'error');
       }
-
-      if (id) {
-        Goals.update(id, { title, targetAmount, currentAmount, deadline, color });
-        UI.showToast('Meta atualizada!', 'success');
-      } else {
-        Goals.create({ title, targetAmount, currentAmount, deadline, color });
-        UI.showToast('Meta criada com sucesso!', 'success');
-      }
-
-      this.closeModal('modalGoal');
-      this.renderCurrentView(false);
     });
 
     // ==================== MODAL DE APORTE EM META ====================
     document.getElementById('formGoalDeposit')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const goalId = document.getElementById('depositGoalId').value;
-      const amount = parseFloat(document.getElementById('depositAmount').value);
+      try {
+        const goalId = document.getElementById('depositGoalId').value;
+        const amount = typeof parseNumericValue === 'function' 
+          ? parseNumericValue(document.getElementById('depositAmount').value)
+          : parseFloat(document.getElementById('depositAmount').value);
 
-      if (isNaN(amount) || amount <= 0) {
-        UI.showToast('Informe um valor de aporte válido.', 'error');
-        return;
-      }
+        if (isNaN(amount) || amount <= 0) {
+          UI.showToast('Informe um valor de aporte válido maior que zero.', 'error');
+          return;
+        }
 
-      const res = Goals.deposit(goalId, amount);
-      if (res.success) {
-        UI.showToast(res.message, 'success');
-        this.closeModal('modalGoalDeposit');
-        this.renderCurrentView(false);
-      } else {
-        UI.showToast(res.message, 'error');
+        const res = Goals.deposit(goalId, amount);
+        if (res.success) {
+          UI.showToast(res.message, 'success');
+          this.closeModal('modalGoalDeposit');
+          this.renderCurrentView(false);
+        } else {
+          UI.showToast(res.message, 'error');
+        }
+      } catch (err) {
+        UI.showToast(`Erro ao registrar aporte: ${err.message}`, 'error');
       }
     });
 

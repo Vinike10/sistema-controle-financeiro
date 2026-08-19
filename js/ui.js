@@ -8,22 +8,42 @@
 const numericValuesCache = new Map();
 
 const UI = {
+  // Manipuladores seguros do DOM para prevenir exceções caso elementos não existam
+  safeSetText(elementId, text) {
+    const el = document.getElementById(elementId);
+    if (el) el.textContent = text !== undefined && text !== null ? text : '';
+    return el;
+  },
+
+  safeSetHTML(elementId, html) {
+    const el = document.getElementById(elementId);
+    if (el) el.innerHTML = html !== undefined && html !== null ? html : '';
+    return el;
+  },
+
   // Inicialização e atualização de ícones Lucide
   refreshIcons() {
-    if (window.lucide) {
-      window.lucide.createIcons();
+    try {
+      if (window.lucide && typeof window.lucide.createIcons === 'function') {
+        window.lucide.createIcons();
+      }
+    } catch (err) {
+      console.warn('[UI] Falha ao renderizar ícones Lucide:', err);
     }
   },
 
-  // Formatação de Moeda Brasileira (R$)
+  // Formatação de Moeda Brasileira (R$) com proteção defensiva
   formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+    const num = (typeof value === 'number' && !isNaN(value)) ? value : (parseFloat(value) || 0);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(num);
   },
 
   // Formatação de Data Brasileira (DD/MM/YYYY)
   formatDate(dateString) {
-    if (!dateString) return '--';
-    const [year, month, day] = dateString.split('-');
+    if (!dateString || typeof dateString !== 'string') return '--';
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return dateString;
+    const [year, month, day] = parts;
     return `${day}/${month}/${year}`;
   },
 
@@ -656,28 +676,34 @@ const UI = {
 
   // Notificação Toast com Animação de Entrada e Saída
   showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    if (!container) return;
+    try {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
 
-    const toast = document.createElement('div');
-    toast.className = `toast toast-${type}`;
-    
-    let iconName = 'info';
-    if (type === 'success') iconName = 'check-circle';
-    if (type === 'error') iconName = 'alert-triangle';
+      const safeType = (type === 'danger') ? 'error' : type;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${safeType}`;
+      
+      let iconName = 'info';
+      if (safeType === 'success') iconName = 'check-circle';
+      if (safeType === 'error') iconName = 'alert-triangle';
+      if (safeType === 'warning') iconName = 'alert-circle';
 
-    toast.innerHTML = `
-      <i data-lucide="${iconName}"></i>
-      <span>${message}</span>
-    `;
+      toast.innerHTML = `
+        <i data-lucide="${iconName}"></i>
+        <span>${message || 'Aviso do sistema'}</span>
+      `;
 
-    container.appendChild(toast);
-    this.refreshIcons();
+      container.appendChild(toast);
+      this.refreshIcons();
 
-    setTimeout(() => {
-      toast.classList.add('closing');
-      setTimeout(() => toast.remove(), 250);
-    }, 3200);
+      setTimeout(() => {
+        toast.classList.add('closing');
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    } catch (err) {
+      console.warn('[UI] Falha ao exibir Toast:', err);
+    }
   },
 
   // ==========================================================================

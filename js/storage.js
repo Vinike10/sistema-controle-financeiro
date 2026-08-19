@@ -156,69 +156,116 @@ const Storage = {
     }
   },
 
-  // Transações
-  getTransactions() {
+  // Armazenamento seguro com proteção contra QuotaExceededError e restrições
+  safeSetItem(key, value) {
     try {
-      return JSON.parse(localStorage.getItem(this.getKey('transactions'))) || [];
-    } catch {
-      return [];
+      const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
+      return true;
+    } catch (err) {
+      console.warn(`[Storage] Falha ao persistir chave "${key}":`, err);
+      if (err.name === 'QuotaExceededError' || err.code === 22 || err.code === 1014) {
+        if (typeof UI !== 'undefined' && UI.showToast) {
+          UI.showToast('Espaço de armazenamento local esgotado no navegador. Exporte um backup e limpe dados antigos.', 'error');
+        }
+      }
+      return false;
     }
   },
 
+  // Leitura segura com tratamento contra JSON corrompido
+  safeGetItem(key, defaultValue = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null || raw === undefined) return defaultValue;
+      return JSON.parse(raw);
+    } catch (err) {
+      console.warn(`[Storage] Dados corrompidos na chave "${key}", recuperando valor padrão:`, err);
+      return defaultValue;
+    }
+  },
+
+  // Transações
+  getTransactions() {
+    const raw = this.safeGetItem(this.getKey('transactions'), []);
+    if (!Array.isArray(raw)) return [];
+    
+    // Sanitização e validação defensiva dos registros
+    return raw.filter(tx => tx && typeof tx === 'object' && tx.id).map(tx => ({
+      ...tx,
+      amount: (typeof tx.amount === 'number' && !isNaN(tx.amount)) ? Number(tx.amount) : (parseFloat(tx.amount) || 0),
+      type: (tx.type === 'income' || tx.type === 'expense' || tx.type === 'transfer') ? tx.type : 'expense',
+      date: tx.date || new Date().toISOString().slice(0, 10),
+      status: tx.status === 'pending' ? 'pending' : 'paid'
+    }));
+  },
+
   saveTransactions(transactions) {
-    localStorage.setItem(this.getKey('transactions'), JSON.stringify(transactions));
+    const validTransactions = Array.isArray(transactions) ? transactions : [];
+    return this.safeSetItem(this.getKey('transactions'), validTransactions);
   },
 
   // Contas
   getAccounts() {
-    try {
-      return JSON.parse(localStorage.getItem(this.getKey('accounts'))) || [];
-    } catch {
-      return [];
-    }
+    const raw = this.safeGetItem(this.getKey('accounts'), []);
+    if (!Array.isArray(raw)) return [];
+
+    return raw.filter(a => a && typeof a === 'object' && a.id).map(a => ({
+      ...a,
+      initialBalance: (typeof a.initialBalance === 'number' && !isNaN(a.initialBalance)) ? Number(a.initialBalance) : (parseFloat(a.initialBalance) || 0),
+      limit: (typeof a.limit === 'number' && !isNaN(a.limit)) ? Number(a.limit) : (parseFloat(a.limit) || 0),
+      type: a.type || 'checking'
+    }));
   },
 
   saveAccounts(accounts) {
-    localStorage.setItem(this.getKey('accounts'), JSON.stringify(accounts));
+    const validAccounts = Array.isArray(accounts) ? accounts : [];
+    return this.safeSetItem(this.getKey('accounts'), validAccounts);
   },
 
   // Categorias
   getCategories() {
-    try {
-      return JSON.parse(localStorage.getItem(this.getKey('categories'))) || DEFAULT_CATEGORIES;
-    } catch {
-      return DEFAULT_CATEGORIES;
-    }
+    const raw = this.safeGetItem(this.getKey('categories'), DEFAULT_CATEGORIES);
+    if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_CATEGORIES;
+    return raw.filter(c => c && typeof c === 'object' && c.id);
   },
 
   saveCategories(categories) {
-    localStorage.setItem(this.getKey('categories'), JSON.stringify(categories));
+    const validCategories = (Array.isArray(categories) && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+    return this.safeSetItem(this.getKey('categories'), validCategories);
   },
 
   // Orçamentos
   getBudgets() {
-    try {
-      return JSON.parse(localStorage.getItem(this.getKey('budgets'))) || [];
-    } catch {
-      return [];
-    }
+    const raw = this.safeGetItem(this.getKey('budgets'), []);
+    if (!Array.isArray(raw)) return [];
+
+    return raw.filter(b => b && typeof b === 'object' && b.id).map(b => ({
+      ...b,
+      monthlyLimit: (typeof b.monthlyLimit === 'number' && !isNaN(b.monthlyLimit)) ? Number(b.monthlyLimit) : (parseFloat(b.monthlyLimit) || 0)
+    }));
   },
 
   saveBudgets(budgets) {
-    localStorage.setItem(this.getKey('budgets'), JSON.stringify(budgets));
+    const validBudgets = Array.isArray(budgets) ? budgets : [];
+    return this.safeSetItem(this.getKey('budgets'), validBudgets);
   },
 
   // Metas
   getGoals() {
-    try {
-      return JSON.parse(localStorage.getItem(this.getKey('goals'))) || [];
-    } catch {
-      return [];
-    }
+    const raw = this.safeGetItem(this.getKey('goals'), []);
+    if (!Array.isArray(raw)) return [];
+
+    return raw.filter(g => g && typeof g === 'object' && g.id).map(g => ({
+      ...g,
+      targetAmount: (typeof g.targetAmount === 'number' && !isNaN(g.targetAmount)) ? Number(g.targetAmount) : (parseFloat(g.targetAmount) || 0),
+      currentAmount: (typeof g.currentAmount === 'number' && !isNaN(g.currentAmount)) ? Number(g.currentAmount) : (parseFloat(g.currentAmount) || 0)
+    }));
   },
 
   saveGoals(goals) {
-    localStorage.setItem(this.getKey('goals'), JSON.stringify(goals));
+    const validGoals = Array.isArray(goals) ? goals : [];
+    return this.safeSetItem(this.getKey('goals'), validGoals);
   },
 
   // Gera dados simulados realistas para o usuário demo

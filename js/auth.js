@@ -11,26 +11,123 @@ const AUTH_STORAGE_KEYS = {
   REMEMBER: 'controldin_auth_remember_v1'
 };
 
+// Fallback em JavaScript puro para SHA-256 caso crypto.subtle não esteja disponível no ambiente
+function sha256Fallback(str) {
+  function rightRotate(value, amount) {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let i, j;
+  let result = '';
+
+  const words = [];
+  const ascii = unescape(encodeURIComponent(str));
+  const asciiBitLength = ascii.length * 8;
+  
+  let hash = [];
+  let k = [];
+  let primeCounter = 0;
+
+  const isComposite = {};
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (!isComposite[candidate]) {
+      for (i = 0; i < 313; i += candidate) {
+        isComposite[i] = candidate;
+      }
+      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    }
+  }
+  
+  let s = ascii + '\x80';
+  while (s.length % 64 !== 56) s += '\x00';
+  for (i = 0; i < s.length; i++) {
+    j = s.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - i) % 4) * 8;
+  }
+  words[words.length] = ((asciiBitLength / maxWord) | 0);
+  words[words.length] = (asciiBitLength | 0);
+  
+  for (j = 0; j < words.length;) {
+    const w = words.slice(j, j += 16);
+    const oldHash = hash.slice(0);
+    
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15] || 0, w2 = w[i - 2] || 0;
+      const a = hash[0], e = hash[4];
+      const temp1 = (hash[7] || 0)
+        + (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25))
+        + ((e & hash[5]) ^ ((~e) & hash[6]))
+        + k[i]
+        + (w[i] = (i < 16) ? (w[i] || 0) : (
+            (w[i - 16] || 0)
+            + (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3))
+            + (w[i - 7] || 0)
+            + (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))
+          ) | 0
+        );
+      const temp2 = (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22))
+        + ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+      
+      hash = [(temp1 + temp2) | 0].concat(hash.slice(0, 7));
+      hash[4] = ((hash[4] || 0) + temp1) | 0;
+    }
+    
+    for (i = 0; i < 8; i++) {
+      hash[i] = ((hash[i] || 0) + (oldHash[i] || 0)) | 0;
+    }
+  }
+  
+  for (i = 0; i < 8; i++) {
+    for (j = 3; j >= 0; j--) {
+      const b = (hash[i] >> (8 * j)) & 255;
+      result += (b < 16 ? '0' : '') + b.toString(16);
+    }
+  }
+  return result;
+}
+
 const Auth = {
   // ==========================================================================
-  // 1. Criptografia & Segurança (Web Crypto API)
+  // 1. Criptografia & Segurança (Web Crypto API + Fallback)
   // ==========================================================================
 
   // Gera um Salt pseudoaleatório criptográfico de 16 bytes em Hexadecimal
   generateSalt() {
-    const array = new Uint8Array(16);
-    window.crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    try {
+      if (window.crypto && window.crypto.getRandomValues) {
+        const array = new Uint8Array(16);
+        window.crypto.getRandomValues(array);
+        return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+      }
+    } catch {
+      // Fallback
+    }
+    // Fallback pseudoaleatório
+    let salt = '';
+    for (let i = 0; i < 32; i++) {
+      salt += Math.floor(Math.random() * 16).toString(16);
+    }
+    return salt;
   },
 
-  // Gera o Hash seguro da senha com Salt utilizando SHA-256
+  // Gera o Hash seguro da senha com Salt utilizando SHA-256 (Web Crypto com fallback)
   async hashPassword(password, salt) {
-    const encoder = new TextEncoder();
-    // Concatena a senha com o Salt exclusivo do usuário
-    const data = encoder.encode(password + ':' + salt);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    const rawPayload = (password || '') + ':' + (salt || '');
+    try {
+      if (window.crypto && window.crypto.subtle && window.crypto.subtle.digest) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(rawPayload);
+        const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      }
+    } catch (err) {
+      console.warn('[Auth] Web Crypto API falhou, usando fallback seguro:', err);
+    }
+    // Fallback nativo
+    return sha256Fallback(rawPayload);
   },
 
   // Medidor de entropia e força da senha
