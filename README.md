@@ -41,7 +41,7 @@ Um sistema completo, moderno, seguro e escalável de gestão financeira pessoal 
 
 ## 🏛️ Governança do Projeto & Padrões GitHub
 
-Este repositório adota um padrão estrito de governança para manter rastreabilidade total de todas as alterações feitas por desenvolvedores ou **Agentes de IA**:
+Este repositório adota um padrão estrito de governança para manter rastreabilidade total de todas as alterações feitas no projeto:
 
 ### 📌 Regras Obrigatórias:
 1. **Toda alteração deve ser iniciada a partir de uma GitHub Issue.**
@@ -53,8 +53,7 @@ Este repositório adota um padrão estrito de governança para manter rastreabil
 4. **Padrão de Commits:** Conventional Commits (`feat(#X): ...`, `fix(#X): ...`, `refactor(#X): ...`).
 
 > 📋 **Catálogo de Issues:** Consulte [`.github/ISSUES_CATALOG.md`](.github/ISSUES_CATALOG.md) para ver todas as especificações de issues prontas.  
-> 🤖 **Atenção Agentes de IA:** É obrigatório ler e seguir o arquivo [`AGENTS.md`](./AGENTS.md).  
-> 👥 **Contribuidores Humanos:** Consultem o guia [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+> 👥 **Guia de Contribuição:** Consulte as diretrizes detalhadas em [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ---
 
@@ -92,7 +91,6 @@ Acesse `http://localhost:8080` no seu navegador.
 │   │   ├── improvement.md              # Template de issue para Melhorias
 │   │   └── config.yml                  # Configurações de issues
 │   └── issues/                         # Especificações detalhadas das issues do projeto
-├── AGENTS.md                           # Diretrizes estritas para Agentes de IA
 ├── CONTRIBUTING.md                     # Guia de contribuição para desenvolvedores
 ├── README.md                           # Apresentação do projeto e instruções
 ├── index.html                          # Estrutura principal da aplicação web & modais
